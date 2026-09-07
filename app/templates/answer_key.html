@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Answer Key - {{ answer_key.job_id }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 11pt;
+            line-height: 1.5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2em;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1em;
+        }
+        .confidential {
+            color: #c00;
+            font-weight: bold;
+            margin-bottom: 0.5em;
+        }
+        .answer {
+            margin-bottom: 1.5em;
+            page-break-inside: avoid;
+        }
+        .answer-header {
+            font-weight: bold;
+            margin-bottom: 0.5em;
+        }
+        .marking-scheme {
+            background: #f0f0f0;
+            padding: 0.5em;
+            margin-top: 0.5em;
+            font-size: 10pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <p class="confidential">CONFIDENTIAL - FOR EXAMINER USE ONLY</p>
+        <h1>Answer Key</h1>
+        <p>Job ID: {{ answer_key.job_id }}</p>
+        <p>Total Questions: {{ answer_key.total_questions }} | Total Marks: {{ answer_key.total_marks }}</p>
+        {% if answer_key.negative_marking_enabled %}
+        <p>Negative Marking: {{ answer_key.negative_marks_per_wrong }} marks per wrong answer</p>
+        {% endif %}
+    </div>
+
+    {% for answer in answer_key.answers %}
+    <div class="answer">
+        <div class="answer-header">
+            Question {{ loop.index }} ({{ answer.marks }} marks)
+        </div>
+        <div class="answer-text">
+            {{ answer.answer_outline or "See marking scheme below" }}
+        </div>
+        {% if answer.marking_scheme %}
+        <div class="marking-scheme">
+            <strong>Marking Scheme:</strong>
+            {% for step, marks in answer.marking_scheme.items() %}
+            <div>{{ step }}: {{ marks }} mark(s)</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <div style="text-align: center; margin-top: 3em; font-size: 9pt; color: #999;">
+        Generated on {{ rendered_at.strftime('%Y-%m-%d %H:%M') }}
+    </div>
+</body>
+</html>
