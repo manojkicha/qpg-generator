@@ -44,10 +44,24 @@ class Settings(BaseSettings):
     azure_doc_intel_endpoint: str = ""
     azure_doc_intel_key: str = ""
 
+    # ─── Vector Store Provider Selection ───────────────────────────────────────
+    # Set to "local" (default — in-memory, no setup), "qdrant", or "azure_ai_search".
+    # See app/services/vector_store/ — this is the only switch needed to move
+    # between backends; no code changes required.
+    vector_store_provider: str = "local"
+
     # ─── Azure AI Search ───────────────────────────────────────────────────────
     azure_search_endpoint: str = ""
     azure_search_key: str = ""
     azure_search_index: str = "question-paper-chunks"
+
+    # ─── Qdrant ────────────────────────────────────────────────────────────────
+    # Default matches the standard local Docker setup (dashboard at
+    # http://localhost:6333/dashboard). Leave qdrant_api_key empty for a local
+    # instance; set it when pointing at Qdrant Cloud or an auth-enabled instance.
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""
+    qdrant_collection: str = "question-paper-chunks"
 
     # ─── Azure Blob Storage ────────────────────────────────────────────────────
     azure_storage_connection_string: str = ""

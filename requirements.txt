@@ -1,0 +1,38 @@
+# Core web framework
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+
+# Database
+sqlalchemy[asyncio]
+aiosqlite
+# psycopg[binary]        # uncomment for PostgreSQL in production
+
+# LLM orchestration
+langgraph
+langchain-core
+langchain-ollama
+langchain-openai
+
+# Vector stores (only install what VECTOR_STORE_PROVIDER actually uses)
+qdrant-client
+azure-search-documents
+
+# Azure services
+azure-core
+azure-ai-documentintelligence
+azure-storage-blob
+
+# PDF rendering
+weasyprint
+jinja2
+
+# Observability
+langfuse
+mlflow
+
+# Testing
+pytest
+pytest-asyncio
+httpx

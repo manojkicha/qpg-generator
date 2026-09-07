@@ -3,11 +3,12 @@
 Based on SDD Section 5.2.1:
 - Document Intelligence extracts text, headings, tables, images with layout metadata
 - Chunking service splits by structural boundaries (chapter/section/heading)
-- Embeddings written to Azure AI Search with metadata fields for filtered retrieval
+- Embeddings written to the configured vector store (Azure AI Search, Qdrant, or
+  in-memory for local dev) with metadata fields for filtered retrieval — see
+  app/services/vector_store/ and the VECTOR_STORE_PROVIDER setting.
 """
 
 import hashlib
-import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -20,11 +21,11 @@ from azure.ai.documentintelligence.models import (
     AnalyzeResult,
 )
 from azure.core.credentials import AzureKeyCredential
-from azure.search.documents.aio import SearchClient
 from azure.storage.blob.aio import BlobServiceClient
 from app.core.config import settings
 from app.core.llm_client import get_embeddings_model
 from app.models.chunk import Chunk
+from app.services.vector_store import VectorRecord, VectorStoreClient, get_vector_store
 
 logger = logging.getLogger(__name__)
 
@@ -67,12 +68,9 @@ class ExtractedContent:
 class IngestionService:
     """Orchestrates document ingestion and indexing pipeline."""
 
-    # Class-level storage for local (no-Azure) mode
-    _local_chunks: dict[str, list[dict]] = {}
-
     def __init__(self) -> None:
         self._doc_intel_client: Optional[DocumentIntelligenceClient] = None
-        self._search_client: Optional[SearchClient] = None
+        self._vector_store: Optional[VectorStoreClient] = None
         self._blob_client: Optional[BlobServiceClient] = None
         self._embedder = None
 
@@ -84,14 +82,15 @@ class IngestionService:
             )
         return self._doc_intel_client
 
-    async def get_search_client(self) -> SearchClient:
-        if self._search_client is None:
-            self._search_client = SearchClient(
-                endpoint=settings.azure_search_endpoint,
-                index_name=settings.azure_search_index,
-                credential=AzureKeyCredential(settings.azure_search_key),
-            )
-        return self._search_client
+    def get_vector_store(self) -> VectorStoreClient:
+        """Return the configured vector store (local / Azure AI Search / Qdrant).
+
+        Selection is driven entirely by `VECTOR_STORE_PROVIDER` in settings —
+        see app/services/vector_store/factory.py.
+        """
+        if self._vector_store is None:
+            self._vector_store = get_vector_store()
+        return self._vector_store
 
     async def get_blob_client(self) -> BlobServiceClient:
         if self._blob_client is None:
@@ -521,72 +520,46 @@ class IngestionService:
     async def embed_and_index(
         self, document_id: str, chunks: List[tuple[str, ChunkMetadata]]
     ) -> List[str]:
-        """Embed chunks and store for retrieval.
+        """Embed chunks and write them to the configured vector store.
 
-        Uses Azure AI Search if configured, otherwise stores chunks in memory
-        for local retrieval (for dev / Ollama-only setups).
+        The backend (in-memory, Azure AI Search, or Qdrant) is selected by
+        `VECTOR_STORE_PROVIDER` — this method itself is backend-agnostic.
         """
         logger.info("Embedding %d chunks for document %s", len(chunks), document_id)
 
         embedder = await self.get_embedder()
+        store = self.get_vector_store()
 
-        # Use Azure AI Search if configured
-        if settings.azure_search_endpoint and settings.azure_search_key:
-            return await self._embed_to_azure_search(document_id, chunks, embedder)
-        else:
-            return await self._embed_to_local(document_id, chunks, embedder)
-
-    async def _embed_to_local(
-        self, document_id: str, chunks: List[tuple[str, ChunkMetadata]], embedder
-    ) -> List[str]:
-        """Store embedded chunks in memory (no Azure Search required)."""
-        texts = [text for text, _ in chunks]
-        embeddings = await embedder.aembed_documents(texts)
-
-        # Store on this class so search_service can read it
-        IngestionService._local_chunks[document_id] = [
-            {"content": text, "metadata": meta, "embedding": emb}
-            for (text, meta), emb in zip(chunks, embeddings)
-        ]
-
-        chunk_ids = [f"{document_id}_chunk_{i}" for i in range(len(chunks))]
-        logger.info("Stored %d chunks locally for document %s", len(chunk_ids), document_id)
-        return chunk_ids
-
-    async def _embed_to_azure_search(
-        self, document_id: str, chunks: List[tuple[str, ChunkMetadata]], embedder
-    ) -> List[str]:
-        """Upload embedded chunks to Azure AI Search."""
-        search_client = await self.get_search_client()
         indexed_ids: list[str] = []
         batch_size = 50
+        created_at = datetime.now(timezone.utc).isoformat()
 
         for i in range(0, len(chunks), batch_size):
             batch = chunks[i : i + batch_size]
             texts = [chunk_text for chunk_text, _ in batch]
             embeddings = await embedder.aembed_documents(texts)
 
-            search_docs = []
-            for j, ((chunk_text, metadata), embedding) in enumerate(zip(batch, embeddings)):
-                chunk_id = f"{document_id}_chunk_{i + j}"
-                search_docs.append({
-                    "id": chunk_id,
-                    "source_document_id": document_id,
-                    "content": chunk_text,
-                    "content_vector": embedding,
-                    "chapter": metadata.chapter,
-                    "topic": metadata.topic,
-                    "heading_path": metadata.heading_path,
-                    "page_start": metadata.page_range[0] if metadata.page_range else None,
-                    "page_end": metadata.page_range[1] if metadata.page_range else None,
-                    "image_references": json.dumps(metadata.image_references),
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                })
-                indexed_ids.append(chunk_id)
+            records = [
+                VectorRecord(
+                    id=f"{document_id}_chunk_{i + j}",
+                    content=chunk_text,
+                    embedding=embedding,
+                    source_document_id=document_id,
+                    chapter=metadata.chapter,
+                    topic=metadata.topic,
+                    heading_path=metadata.heading_path,
+                    page_start=metadata.page_range[0] if metadata.page_range else None,
+                    page_end=metadata.page_range[1] if metadata.page_range else None,
+                    image_references=metadata.image_references,
+                    created_at=created_at,
+                )
+                for j, ((chunk_text, metadata), embedding) in enumerate(zip(batch, embeddings))
+            ]
 
-            await search_client.upload_documents(documents=search_docs)
+            batch_ids = await store.upsert_chunks(document_id, records)
+            indexed_ids.extend(batch_ids)
 
-        logger.info("Indexed %d chunks to Azure AI Search", len(indexed_ids))
+        logger.info("Indexed %d chunks for document %s", len(indexed_ids), document_id)
         return indexed_ids
 
     async def process_document(
@@ -624,7 +597,7 @@ class IngestionService:
         """Clean up resources."""
         if self._doc_intel_client:
             await self._doc_intel_client.close()
-        if self._search_client:
-            await self._search_client.close()
+        if self._vector_store:
+            await self._vector_store.close()
         if self._blob_client:
             await self._blob_client.close()
