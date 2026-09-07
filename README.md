@@ -178,6 +178,25 @@ The Qdrant collection is created automatically on first write, sized to match wh
 
 > **Backward compatibility:** if `VECTOR_STORE_PROVIDER` is left unset (`local`) but `AZURE_SEARCH_ENDPOINT` and `AZURE_SEARCH_KEY` are both set, Azure AI Search is used automatically. Set `VECTOR_STORE_PROVIDER=azure_ai_search` explicitly to make that intent clear.
 
+### Try it locally: ingest a PDF + generate a paper end-to-end
+
+Two helper scripts under `scripts/` let you exercise the full pipeline (ingest → retrieve → generate → compile → render PDF) without running the API server:
+
+```bash
+# 1. Generate a random, schema-valid specification (defaults to the sample PDF's topics)
+python scripts/generate_random_spec.py --seed 42 -o sample_specification.json
+
+# 2. Ingest data/sample-maths.pdf into whichever VECTOR_STORE_PROVIDER is set in .env,
+#    then generate + compile + render a question paper from that specification
+python scripts/demo_ingest_and_generate.py \
+    --pdf data/sample-maths.pdf \
+    --document-id demo-maths-001 \
+    --spec sample_specification.json \
+    --out output/
+```
+
+This writes `question_paper.json`, `answer_key.json`, `question_paper.pdf`, and `answer_key.pdf` to `output/`. Point `--pdf` at your own document (and `--topics` on the first script at its subject matter) to test with different content.
+
 ## Technology Stack
 
 Based on SDD Section 3:
