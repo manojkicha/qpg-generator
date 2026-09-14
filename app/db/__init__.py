@@ -29,6 +29,7 @@ async_session_factory = async_sessionmaker(
 
 async def init_db() -> None:
     """Initialize database tables."""
+    from app.models.document import document_table  # noqa: F401
     from app.models.question_paper import question_paper_table  # noqa: F401
     from app.models.job import job_table  # noqa: F401
     from app.models.chunk import chunk_table  # noqa: F401
