@@ -19,15 +19,26 @@ langchain-openai
 # Vector stores (only install what VECTOR_STORE_PROVIDER actually uses)
 qdrant-client
 azure-search-documents
+chromadb
 
 # Azure services
 azure-core
 azure-ai-documentintelligence
 azure-storage-blob
 
-# PDF rendering
+# PDF rendering & Processing
 weasyprint
 jinja2
+fpdf2
+pymupdf
+
+# OCR dependencies
+paddleocr
+pdf2image
+pytesseract
+opencv-python
+numpy
+pillow
 
 # Observability
 langfuse
@@ -37,4 +48,4 @@ mlflow
 pytest
 pytest-asyncio
 httpx
-chromadb
+
