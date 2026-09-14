@@ -1,6 +1,7 @@
 """Generator Agent Node — generates individual questions using LLM with context from retrieval."""
 
 import logging
+import json
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -41,96 +42,106 @@ QUALITY RULES (apply to ALL questions):
         self.llm = llm
 
     async def execute(self, state: dict) -> dict:
-        """Execute the generation step for a single question.
+        """Execute the generation step for all tasks in the plan.
 
         Args:
-            state: Contains 'task_assignment', 'context_chunks', 'specification'
+            state: Contains 'generation_plan', 'context_chunks', 'specification'
 
         Returns:
-            Updated state with the generated question
+            Updated state with the list of generated questions
         """
-        task = state.get("task_assignment", {})
+        generation_plan = state.get("generation_plan", {})
         context_chunks = state.get("context_chunks", [])
         specification = state.get("specification", {})
 
-        question_type = task.get("question_type", "short_answer")
-        topic = task.get("topic", "")
-        difficulty = task.get("difficulty_level", "medium")
-        marks = task.get("marks", 10)
-        estimated_time = task.get("estimated_time_minutes", 5)
+        # Determine the list of tasks to generate
+        tasks = []
+        if "all_tasks" in generation_plan:
+            tasks = generation_plan["all_tasks"]
+        elif "sections" in generation_plan:
+            for section in generation_plan["sections"]:
+                for task in section.get("tasks", []):
+                    tasks.append(task)
+        elif "tasks" in generation_plan:
+            tasks = generation_plan["tasks"]
 
-        logger.info(
-            "Generating question: type=%s, topic=%s, diff=%s, marks=%d",
-            question_type, topic, difficulty, marks
-        )
+        if not tasks:
+            logger.warning("No tasks found in generation plan")
+            return {"questions": [], "agent_trace": state.get("agent_trace", [])}
 
-        # Select relevant context
-        relevant_context = self._select_context(context_chunks, topic)
+        all_generated_questions = []
 
-        # Build the grade-aware context block
-        grade_ctx = build_grade_context(specification)
-        # Build the per-question-type formatting instructions
-        type_inst = build_question_type_instruction(question_type)
+        for task in tasks:
+            question_type = task.get("question_type", "short_answer")
+            topic = task.get("topic", "")
+            difficulty = task.get("difficulty_level", "medium")
+            marks = task.get("marks", 10)
+            estimated_time = task.get("estimated_time_minutes", 5)
 
-        messages = [
-            SystemMessage(content=self.SYSTEM_PROMPT),
-            HumanMessage(content=(
-                f"{grade_ctx}\n\n"
-                f"QUESTION-TYPE-SPECIFIC INSTRUCTIONS ({question_type}):\n{type_inst}\n\n"
-                f"Generate ONE question with the following parameters:\n\n"
-                f"  Question Type: {question_type}\n"
-                f"  Topic: {topic}\n"
-                f"  Difficulty: {difficulty}\n"
-                f"  Marks: {marks}\n"
-                f"  Estimated Time: {estimated_time} minutes\n\n"
-                f"  Source Context (use to ensure accuracy):\n"
-                f"  {relevant_context if relevant_context else 'No source context provided'}\n\n"
-                f"  Return ONLY a JSON object with these keys:\n"
-                f"  question_text, topic, question_type, difficulty_level, marks,\n"
-                f"  estimated_time_minutes, answer_outline, sample_answer, marking_scheme"
-            )),
-        ]
+            logger.info("Generating question: type=%s, topic=%s, diff=%s, marks=%d",
+                        question_type, topic, difficulty, marks)
 
-        response = await self.llm.ainvoke(messages)
+            relevant_context = self._select_context(context_chunks, topic)
+            grade_ctx = build_grade_context(specification)
+            type_inst = build_question_type_instruction(question_type)
 
-        # Parse JSON from response
-        try:
-            import json
-            response_text = response.content
-            if "```json" in response_text:
-                response_text = response_text.split("```json")[1].split("```")[0]
-            elif "```" in response_text:
-                response_text = response_text.split("```")[1].split("```")[0]
+            messages = [
+                SystemMessage(content=self.SYSTEM_PROMPT),
+                HumanMessage(content=(
+                    f"{grade_ctx}\n\n"
+                    f"QUESTION-TYPE-SPECIFIC INSTRUCTIONS ({question_type}):\n{type_inst}\n\n"
+                    f"Generate ONE question with the following parameters:\n\n"
+                    f"  Question Type: {question_type}\n"
+                    f"  Topic: {topic}\n"
+                    f"  Difficulty: {difficulty}\n"
+                    f"  Marks: {marks}\n"
+                    f"  Estimated Time: {estimated_time} minutes\n\n"
+                    f"  Source Context (use to ensure accuracy):\n"
+                    f"  {relevant_context if relevant_context else 'No source context provided'}\n\n"
+                    f"  Return ONLY a JSON object with these keys:\n"
+                    f"  question_text, topic, question_type, difficulty_level, marks,\n"
+                    f"  estimated_time_minutes, answer_outline, sample_answer, marking_scheme"
+                )),
+            ]
 
-            question_data = json.loads(response_text.strip())
-        except Exception as e:
-            logger.warning("Failed to parse question JSON: %s", e)
-            question_data = {
-                "question_text": (response.content[:500] if response.content else ""),
-                "topic": topic,
-                "question_type": question_type,
-                "difficulty_level": difficulty,
-                "marks": marks,
-                "estimated_time_minutes": estimated_time,
-                "answer_outline": "",
-                "sample_answer": "",
-                "marking_scheme": {},
-            }
+            try:
+                response = await self.llm.ainvoke(messages)
+                response_text = response.content
+                if "```json" in response_text:
+                    response_text = response_text.split("```json")[1].split("```")[0]
+                elif "```" in response_text:
+                    response_text = response_text.split("```")[1].split("```")[0]
 
-        # Backfill any missing fields so downstream consumers can rely on the shape
-        question_data.setdefault("topic", topic)
-        question_data.setdefault("question_type", question_type)
-        question_data.setdefault("difficulty_level", difficulty)
-        question_data.setdefault("marks", marks)
-        question_data.setdefault("estimated_time_minutes", estimated_time)
-        question_data.setdefault("answer_outline", "")
-        question_data.setdefault("sample_answer", "")
-        question_data.setdefault("marking_scheme", {})
+                question_data = json.loads(response_text.strip())
+            except Exception as e:
+                logger.warning("Failed to generate question for %s: %s", task.get("id"), e)
+                question_data = {
+                    "question_text": "Error generating question.",
+                    "topic": topic,
+                    "question_type": question_type,
+                    "difficulty_level": difficulty,
+                    "marks": marks,
+                    "estimated_time_minutes": estimated_time,
+                    "answer_outline": "",
+                    "sample_answer": "",
+                    "marking_scheme": {},
+                }
+
+            # Backfill and attach section info for the PDF renderer
+            question_data.setdefault("topic", topic)
+            question_data.setdefault("question_type", question_type)
+            question_data.setdefault("difficulty_level", difficulty)
+            question_data.setdefault("marks", marks)
+            question_data.setdefault("estimated_time_minutes", estimated_time)
+            question_data["section_title"] = task.get("section_title", "General")
+            question_data["marks_summary"] = task.get("marks_summary", "")
+
+            all_generated_questions.append(question_data)
 
         return {
-            "generated_question": question_data,
+            "questions": all_generated_questions,
             "agent_trace": state.get("agent_trace", []) + [
-                {"agent": "generator", "status": "completed", "question_id": task.get("id")}
+                {"agent": "generator", "status": "completed", "count": len(all_generated_questions)}
             ],
         }
 

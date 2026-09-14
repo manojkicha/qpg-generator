@@ -39,10 +39,33 @@ class CompilationService:
         """Compile questions into final paper structure.
 
         Assembles:
-        - Question Paper JSON with questions, metadata, spec hash
+        - Question Paper JSON with sectional structure, metadata, spec hash
         - Answer Key JSON with correct answers, scoring rubric
         """
         logger.info("Compiling %d questions for job %s", len(questions), job_id)
+
+        # Group questions by section
+        sections = {}
+        for q in questions:
+            s_title = q.get("section_title", "General Section")
+            s_summary = q.get("marks_summary", "")
+            if s_title not in sections:
+                sections[s_title] = {
+                    "section_title": s_title,
+                    "marks_summary": s_summary,
+                    "questions": []
+                }
+            sections[s_title]["questions"].append(q)
+
+        # Convert sections dict to a sorted list based on original question order
+        # We can't easily sort since it's a dict, but let's maintain original order
+        ordered_sections = []
+        seen_sections = set()
+        for q in questions:
+            s_title = q.get("section_title", "General Section")
+            if s_title not in seen_sections:
+                ordered_sections.append(sections[s_title])
+                seen_sections.add(s_title)
 
         # Build question paper
         question_paper = {
@@ -57,6 +80,7 @@ class CompilationService:
             "version": 1,
             "specification_hash": self._hash_specification(specification),
             "questions": self._format_questions_for_paper(questions),
+            "sections": ordered_sections,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "metadata": specification.get("metadata", {}),
         }
@@ -64,7 +88,7 @@ class CompilationService:
         # Build answer key
         answer_key = {
             "job_id": job_id,
-            "question_paper_id": f"qp_{job_id}",  # Will be replaced with actual ID
+            "question_paper_id": f"qp_{job_id}",
             "tenant_id": tenant_id,
             "total_questions": len(questions),
             "total_marks": specification.get("total_marks", 100),

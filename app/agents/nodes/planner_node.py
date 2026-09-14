@@ -14,33 +14,45 @@ class PlannerNode:
     """Plans the generation tasks based on the specification."""
 
     SYSTEM_PROMPT = """You are a question paper planner. Given a specification for a question paper,
-you must decompose it into specific generation tasks for each question.
+you must decompose it into a structured, sectional plan following a formal academic template.
 
 The specification includes:
 - Total marks and question count
 - Category distribution requirements
-- Individual question specifications
-- Difficulty levels
+- Overall difficulty level
 
-Your task is to output a structured plan that:
-1. Distributes questions across categories per the specification
-2. Assigns appropriate difficulty levels (mix of easy, medium, hard)
-3. Ensures mark balance across the paper
-4. Identifies any special requirements (e.g., diagrams, calculations, pictures)
-5. Picks age-appropriate question types (e.g., fill_in_the_blank, true_false, picture_based_mcq
-   for younger grades; problem_solving, essay for older grades)
+Your task is to output a structured plan organized by SECTIONS.
+Each section must have:
+1. A Section Title (e.g., "SECTION A – CHOOSE THE CORRECT ANSWER")
+2. A Marks Summary (e.g., "5 x 1 = 5 Marks")
+3. A list of tasks for that section.
+
+Example Sections:
+- SECTION A: MCQs (Choose the correct answer)
+- SECTION B: Fill in the blanks
+- SECTION C: Match the following
+- SECTION D: Answer in one word
+- SECTION E: Answer the following (Descriptive)
+- SECTION F: Activity / Think and Answer
 
 Output a JSON plan with this structure:
 {
-  "tasks": [
+  "sections": [
     {
-      "id": "q1",
-      "question_type": "fill_in_the_blank",
-      "topic": "Plants",
-      "difficulty_level": "easy",
-      "marks": 1,
-      "estimated_time_minutes": 1,
-      "prompt_template": "Generate a fill-in-the-blank question about plant parts for Grade 1 students"
+      "section_title": "SECTION A – CHOOSE THE CORRECT ANSWER",
+      "marks_summary": "5 x 1 = 5 Marks",
+      "tasks": [
+        {
+          "id": "q1",
+          "question_type": "multiple_choice",
+          "topic": "Plants",
+          "difficulty_level": "easy",
+          "marks": 1,
+          "estimated_time_minutes": 1,
+          "prompt_template": "Generate an MCQ about plant parts"
+        },
+        ...
+      ]
     },
     ...
   ]
@@ -75,35 +87,76 @@ Return ONLY the JSON object."""
         self.llm = llm
 
     async def execute(self, state: dict) -> dict:
-        """Execute the planning step.
+        """Execute the planning step based on the structured input JSON.
 
         Args:
-            state: Contains 'specification' with the question paper spec
+            state: Contains 'specification' which now follows the ExamSpecification format.
 
         Returns:
-            Updated state with 'generation_plan' containing task assignments
+            Updated state with 'generation_plan' containing sections and tasks.
         """
-        specification = state.get("specification", {})
+        spec = state.get("specification", {})
 
-        logger.info("Planning generation for paper: %s", specification.get("title"))
+        # Handle the new structured JSON format
+        if "exam" in spec and "sections" in spec:
+            logger.info("Using structured ExamSpecification for planning: %s", spec["exam"].get("title"))
 
-        # If the spec already enumerates individual question specifications, use them
-        explicit_questions = specification.get("questions") or []
-        if explicit_questions:
-            plan = self._plan_from_explicit_questions(specification, explicit_questions)
-            logger.info("Generated %d tasks from explicit question specs", len(plan.get("tasks", [])))
+            sections = []
+            all_tasks = []
+
+            # Map user-defined question types to agent-internal types
+            type_mapping = {
+                "mcq": "multiple_choice",
+                "fill_blank": "fill_in_the_blank",
+                "match": "match_the_following",
+                "one_word": "one_word_answer",
+                "short_answer": "short_answer",
+                "activity": "picture_based_mcq" # Mapping activity to a complex type
+            }
+
+            for i, s in enumerate(spec["sections"]):
+                section_name = s.get("name", f"Section {i+1}")
+                q_type = s.get("question_type", "short_answer")
+                internal_type = type_mapping.get(q_type, q_type)
+                count = s.get("question_count", 1)
+                marks = s.get("marks_each", 1)
+
+                # Calculate marks summary (e.g., "5 x 1 = 5 Marks")
+                summary = f"{count} x {marks} = {count * marks} Marks"
+
+                tasks = []
+                for j in range(count):
+                    task_id = f"q{len(all_tasks)+1}"
+                    tasks.append({
+                        "id": task_id,
+                        "question_type": internal_type,
+                        "topic": spec.get("subject", spec["exam"].get("title", "General")),
+                        "difficulty_level": spec.get("difficulty_level", "medium"),
+                        "marks": marks,
+                        "estimated_time_minutes": 2,
+                        "prompt_template": f"Generate a {internal_type} question about {spec.get('subject', 'the subject')}",
+                        "section_title": section_name,
+                        "marks_summary": summary
+                    })
+
+                all_tasks.extend(tasks)
+                sections.append({
+                    "section_title": section_name,
+                    "marks_summary": summary,
+                    "tasks": tasks
+                })
+
             return {
-                "generation_plan": plan,
+                "generation_plan": {"sections": sections, "all_tasks": all_tasks},
                 "agent_trace": state.get("agent_trace", []) + [
-                    {"agent": "planner", "status": "completed",
-                     "tasks_count": len(plan.get("tasks", [])),
-                     "mode": "explicit_specs"}
+                    {"agent": "planner", "status": "completed", "sections_count": len(sections)}
                 ],
             }
 
-        # Otherwise ask the LLM to plan
-        grade_ctx = build_grade_context(specification)
-        profile_key = detect_grade_profile(specification)
+        # Fallback for old specification format
+        logger.warning("Input specification does not follow structured format; using legacy planner")
+        grade_ctx = build_grade_context(spec)
+        profile_key = detect_grade_profile(spec)
         allowed_types = self.DEFAULT_QUESTION_TYPES.get(profile_key, [])
 
         messages = [
@@ -111,38 +164,22 @@ Return ONLY the JSON object."""
             HumanMessage(content=(
                 f"{grade_ctx}\n\n"
                 f"Allowed question types for this grade: {', '.join(allowed_types) or 'any'}\n\n"
-                f"Create a generation plan for this specification:\n{specification}\n\n"
+                f"Create a generation plan for this specification:\n{spec}\n\n"
                 f"Return ONLY a JSON object."
             )),
         ]
 
         response = await self.llm.ainvoke(messages)
-
-        # Parse the plan from the response
         try:
             import json
-            plan_text = response.content
-            if "```json" in plan_text:
-                plan_text = plan_text.split("```json")[1].split("```")[0]
-            elif "```" in plan_text:
-                plan_text = plan_text.split("```")[1].split("```")[0]
-
-            plan = json.loads(plan_text.strip())
-        except Exception as e:
-            logger.warning("Failed to parse plan JSON: %s", e)
-            plan = {"tasks": [], "raw_response": response.content}
-
-        # Fallback: synthesize a simple plan if LLM returned nothing usable
-        if not plan.get("tasks"):
-            logger.warning("Planner produced no tasks; using synthetic fallback")
-            plan = self._synthetic_plan(specification, profile_key)
-            logger.info("Generated %d tasks in synthetic plan", len(plan.get("tasks", [])))
+            plan = json.loads(response.content)
+        except:
+            plan = self._synthetic_sectional_plan(spec, profile_key)
 
         return {
             "generation_plan": plan,
             "agent_trace": state.get("agent_trace", []) + [
-                {"agent": "planner", "status": "completed",
-                 "tasks_count": len(plan.get("tasks", []))}
+                {"agent": "planner", "status": "completed"}
             ],
         }
 
@@ -163,24 +200,56 @@ Return ONLY the JSON object."""
             })
         return {"tasks": tasks}
 
-    def _synthetic_plan(self, specification: dict, profile_key: str) -> dict:
-        """Fallback: build a simple plan from the spec's question count + grade defaults."""
-        count = specification.get("question_count", 5)
-        marks = max(1, specification.get("total_marks", count) // count)
-        allowed_types = self.DEFAULT_QUESTION_TYPES.get(
-            profile_key, self.DEFAULT_QUESTION_TYPES["grade_6_to_10"]
-        )
-        # Rotate through the allowed types
-        tasks = []
-        for i in range(count):
-            qt = allowed_types[i % len(allowed_types)]
-            tasks.append({
-                "id": f"q{i+1}",
-                "question_type": qt,
-                "topic": (specification.get("subject", "General")),
-                "difficulty_level": "easy" if i < count / 3 else "medium" if i < 2 * count / 3 else "hard",
-                "marks": marks,
-                "estimated_time_minutes": 1 if profile_key in {"grade_1", "grade_2"} else 3,
-                "prompt_template": f"Generate a {qt} question for {specification.get('subject', 'this subject')}",
-            })
-        return {"tasks": tasks}
+    def _synthetic_sectional_plan(self, specification: dict, profile_key: str) -> dict:
+        """Fallback: build a structured sectional plan."""
+        subject = specification.get("subject", "General")
+        difficulty = specification.get("difficulty_level", "medium")
+
+        sections = [
+            {
+                "section_title": "SECTION A – CHOOSE THE CORRECT ANSWER",
+                "marks_summary": "5 x 1 = 5 Marks",
+                "tasks": [
+                    {"id": f"q{i+1}", "question_type": "multiple_choice", "topic": subject,
+                     "difficulty_level": difficulty, "marks": 1, "estimated_time_minutes": 1,
+                     "prompt_template": f"Generate an MCQ for {subject}"} for i in range(5)
+                ]
+            },
+            {
+                "section_title": "SECTION B – FILL IN THE BLANKS",
+                "marks_summary": "5 x 1 = 5 Marks",
+                "tasks": [
+                    {"id": f"q{i+6}", "question_type": "fill_in_the_blank", "topic": subject,
+                     "difficulty_level": difficulty, "marks": 1, "estimated_time_minutes": 1,
+                     "prompt_template": f"Generate a fill-in-the-blank for {subject}"} for i in range(5)
+                ]
+            },
+            {
+                "section_title": "SECTION C – MATCH THE FOLLOWING",
+                "marks_summary": "5 x 1 = 5 Marks",
+                "tasks": [
+                    {"id": "match_1", "question_type": "match_the_following", "topic": subject,
+                     "difficulty_level": difficulty, "marks": 5, "estimated_time_minutes": 5,
+                     "prompt_template": f"Generate a matching set of 5 items for {subject}"}
+                ]
+            },
+            {
+                "section_title": "SECTION D – ANSWER IN ONE WORD",
+                "marks_summary": "5 x 1 = 5 Marks",
+                "tasks": [
+                    {"id": f"q{i+11}", "question_type": "one_word_answer", "topic": subject,
+                     "difficulty_level": difficulty, "marks": 1, "estimated_time_minutes": 1,
+                     "prompt_template": f"Generate a one-word answer question for {subject}"} for i in range(5)
+                ]
+            },
+            {
+                "section_title": "SECTION E – ANSWER THE FOLLOWING",
+                "marks_summary": "3 x 2 = 6 Marks",
+                "tasks": [
+                    {"id": f"q{i+16}", "question_type": "short_answer", "topic": subject,
+                     "difficulty_level": difficulty, "marks": 2, "estimated_time_minutes": 3,
+                     "prompt_template": f"Generate a short answer question for {subject}"} for i in range(3)
+                ]
+            }
+        ]
+        return {"sections": sections}

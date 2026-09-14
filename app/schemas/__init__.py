@@ -8,6 +8,7 @@ from .specification import (
     QuestionPaperCreate,
     QuestionPaperValidationSummary,
 )
+from .pdf_generation import PDFGenerationResponse
 from .question_paper import (
     QuestionPaperResponse,
     QuestionPaperStatusUpdate,
@@ -18,6 +19,7 @@ from .chunk import ChunkResponse
 __all__ = [
     "CategoryDistribution",
     "MarkDistribution",
+    "PDFGenerationResponse",
     "Specification",
     "SpecificationCreate",
     "QuestionPaperCreate",

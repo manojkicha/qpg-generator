@@ -89,6 +89,11 @@ class Specification(BaseModel):
         ge=1, description="Paper duration in minutes"
     )
     total_marks: int = Field(ge=1, default=100, description="Total paper marks")
+    difficulty_level: str = Field(
+        default="medium",
+        pattern="^(easy|medium|hard)$",
+        description="Overall difficulty level for the paper",
+    )
     question_count: int = Field(
         ge=1, description="Number of questions to generate"
     )

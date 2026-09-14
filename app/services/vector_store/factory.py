@@ -21,6 +21,7 @@ def get_vector_store() -> VectorStoreClient:
     Values:
       - "qdrant"          → Qdrant (QDRANT_URL, QDRANT_COLLECTION, QDRANT_API_KEY)
       - "azure_ai_search" → Azure AI Search (AZURE_SEARCH_ENDPOINT/KEY/INDEX)
+      - "chroma"          → Chroma DB (lightweight embedded vector store)
       - "local" (default) → in-memory cosine similarity search, no external DB
 
     For backward compatibility with setups from before this setting existed:
@@ -40,6 +41,12 @@ def get_vector_store() -> VectorStoreClient:
 
         logger.info("Vector store: Azure AI Search (%s)", settings.azure_search_endpoint)
         return AzureAISearchStore()
+
+    if provider == "chroma":
+        from .chroma_store import ChromaStore
+
+        logger.info("Vector store: Chroma DB (collection=%s)", settings.chroma_collection)
+        return ChromaStore()
 
     if provider == "local":
         if settings.azure_search_endpoint and settings.azure_search_key:

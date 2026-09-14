@@ -101,6 +101,8 @@ class GenerationPipeline:
     async def ainvoke(self, input_state: dict) -> dict:
         """Run the pipeline with the given input state."""
         logger.info("Invoking generation pipeline for job: %s", input_state.get("job_id"))
+        # If input_state contains 'specification' but not 'sections', we need to ensure
+        # the pipeline handles the sectional plan produced by the new PlannerNode.
         result = await self._graph.ainvoke(input_state)
         return result
 

@@ -1,5 +1,6 @@
 # Core web framework
 fastapi
+python-multipart
 uvicorn[standard]
 pydantic
 pydantic-settings
@@ -36,3 +37,4 @@ mlflow
 pytest
 pytest-asyncio
 httpx
+chromadb

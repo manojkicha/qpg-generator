@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     qdrant_api_key: str = ""
     qdrant_collection: str = "question-paper-chunks"
 
+    # ─── Chroma DB ─────────────────────────────────────────────────────────────
+    # Local embedded vector store — no separate service needed.
+    chroma_collection: str = "question-paper-chunks"
+
     # ─── Azure Blob Storage ────────────────────────────────────────────────────
     azure_storage_connection_string: str = ""
     azure_blob_container: str = "source-documents"
