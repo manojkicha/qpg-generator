@@ -1,0 +1,46 @@
+{
+    "exam": {
+        "title": "Grade 1 - Environmental Studies",
+        "exam_type": "Term Examination",
+        "duration_minutes": 60,
+        "maximum_marks": 30
+    },
+    "sections": [
+        {
+            "name": "Choose the Correct Answer",
+            "question_type": "mcq",
+            "question_count": 5,
+            "marks_each": 1
+        },
+        {
+            "name": "Fill in the Blanks",
+            "question_type": "fill_blank",
+            "question_count": 5,
+            "marks_each": 1
+        },
+        {
+            "name": "Match the Following",
+            "question_type": "match",
+            "question_count": 5,
+            "marks_each": 1
+        },
+        {
+            "name": "Answer in One Word",
+            "question_type": "one_word",
+            "question_count": 5,
+            "marks_each": 1
+        },
+        {
+            "name": "Answer the Following",
+            "question_type": "short_answer",
+            "question_count": 3,
+            "marks_each": 2
+        },
+        {
+            "name": "Activity / Think and Answer",
+            "question_type": "activity",
+            "question_count": 1,
+            "marks_each": 4
+        }
+    ]
+}

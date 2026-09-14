@@ -120,6 +120,8 @@ Polls the status of a specific generation job to retrieve the final results.
 | `answer_paper_url` | `string \| null` | Path/URL to the rendered PDF Answer Key. |
 | `question_paper_md_url` | `string \| null` | Path/URL to the rendered Markdown Question Paper. |
 | `answer_paper_md_url` | `string \| null` | Path/URL to the rendered Markdown Answer Key. |
+| `question_paper_json_url` | `string \| null` | Path/URL to the raw JSON Question Paper (detailed question types). |
+| `answer_key_json_url` | `string \| null` | Path/URL to the raw JSON Answer Key. |
 | `error_message` | `string \| null` | Error details if status is `failed`. |
 | `completed_at` | `string \| null` | Completion timestamp. |
 
@@ -269,6 +271,8 @@ Polls the status of a specific generation job to retrieve the final results.
 | `answer_paper_url` | `string \| null` | Path/URL to the rendered PDF Answer Key. |
 | `question_paper_md_url` | `string \| null` | Path/URL to the rendered Markdown Question Paper. |
 | `answer_paper_md_url` | `string \| null` | Path/URL to the rendered Markdown Answer Key. |
+| `question_paper_json_url` | `string \| null` | Path/URL to the raw JSON Question Paper (detailed question types). |
+| `answer_key_json_url` | `string \| null` | Path/URL to the raw JSON Answer Key. |
 | `error_message` | `string \| null` | Error details if status is `failed`. |
 | `completed_at` | `string \| null` | Completion timestamp. |
 

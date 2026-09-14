@@ -36,5 +36,9 @@ class JobStatusResponse(BaseModel):
     validation_summary: Optional[dict] = None
     question_paper_url: Optional[str] = None
     answer_paper_url: Optional[str] = None
+    question_paper_md_url: Optional[str] = None
+    answer_paper_md_url: Optional[str] = None
+    question_paper_json_url: Optional[str] = None
+    answer_key_json_url: Optional[str] = None
     error_message: Optional[str] = None
     completed_at: Optional[datetime] = None

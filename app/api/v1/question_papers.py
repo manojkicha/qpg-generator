@@ -295,7 +295,16 @@ async def run_generation_pipeline_from_pdf(job_id: str, job_record: dict) -> Non
             job_record["question_paper_md_url"] = str(question_paper_md_path)
             job_record["answer_paper_md_url"] = str(answer_key_md_path)
 
-            # 2. Generate PDF (Optional/Fallback)
+            # 2. Generate JSON (Structured Data)
+            question_paper_json_path = data_dir / f"{job_id}_question_paper.json"
+            answer_key_json_path = data_dir / f"{job_id}_answer_key.json"
+            question_paper_json_path.write_text(json.dumps(compiled.question_paper, indent=2), encoding="utf-8")
+            answer_key_json_path.write_text(json.dumps(compiled.answer_key, indent=2), encoding="utf-8")
+
+            job_record["question_paper_json_url"] = str(question_paper_json_path)
+            job_record["answer_key_json_url"] = str(answer_key_json_path)
+
+            # 3. Generate PDF (Optional/Fallback)
             question_paper_pdf = await renderer.render_question_paper(compiled.question_paper)
             answer_key_pdf = await renderer.render_answer_key(compiled.answer_key)
 
@@ -524,7 +533,16 @@ async def run_generation_pipeline_from_blob(job_id: str, job_record: dict) -> No
             job_record["question_paper_md_url"] = str(question_paper_md_path)
             job_record["answer_paper_md_url"] = str(answer_key_md_path)
 
-            # 2. Generate PDF (Optional/Fallback)
+            # 2. Generate JSON (Structured Data)
+            question_paper_json_path = data_dir / f"{job_id}_question_paper.json"
+            answer_key_json_path = data_dir / f"{job_id}_answer_key.json"
+            question_paper_json_path.write_text(json.dumps(compiled.question_paper, indent=2), encoding="utf-8")
+            answer_key_json_path.write_text(json.dumps(compiled.answer_key, indent=2), encoding="utf-8")
+
+            job_record["question_paper_json_url"] = str(question_paper_json_path)
+            job_record["answer_key_json_url"] = str(answer_key_json_path)
+
+            # 3. Generate PDF (Optional/Fallback)
             question_paper_pdf = await renderer.render_question_paper(compiled.question_paper)
             answer_key_pdf = await renderer.render_answer_key(compiled.answer_key)
 
