@@ -121,16 +121,19 @@ class QdrantStore(VectorStoreClient):
                 models.FieldCondition(key="topic", match=models.MatchValue(value=filter_category))
             )
 
-        hits = await client.search(
+        hits = await client.query_points(
             collection_name=settings.qdrant_collection,
-            query_vector=query_vector,
+            query=query_vector,
             query_filter=models.Filter(must=must_conditions),
             limit=top_k,
             with_payload=True,
         )
 
+        # query_points returns a QueryResponse object; we need to extract the points
+        points = hits.points
+
         search_results = []
-        for point in hits:
+        for point in points:
             payload = point.payload or {}
             search_results.append(
                 VectorSearchResult(
@@ -147,6 +150,24 @@ class QdrantStore(VectorStoreClient):
 
         logger.info("Qdrant search returned %d results", len(search_results))
         return search_results
+
+    async def count_chunks(self, document_id: str) -> int:
+        """Count the number of chunks for a specific document."""
+        client = self._get_client()
+        if not await client.collection_exists(settings.qdrant_collection):
+            return 0
+
+        result = await client.count(
+            collection_name=settings.qdrant_collection,
+            count_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="source_document_id", match=models.MatchValue(value=document_id)
+                    )
+                ]
+            ),
+        )
+        return result.count
 
     async def close(self) -> None:
         if self._client:

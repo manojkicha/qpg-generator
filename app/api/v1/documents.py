@@ -71,6 +71,20 @@ async def upload_document(
     return doc_record
 
 @router.get(
+    "/subjects",
+    response_model=List[dict],
+    summary="List unique subjects for a tenant and grade",
+)
+async def list_subjects(
+    tenant_id: str,
+    grade: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve a list of all unique subjects available for the given tenant and grade."""
+    doc_service = DocumentService()
+    return await doc_service.list_subjects(db, tenant_id, grade)
+
+@router.get(
     "/",
     response_model=List[DocumentResponse],
     summary="List all documents for a tenant",
@@ -78,11 +92,12 @@ async def upload_document(
 async def list_documents(
     tenant_id: str,
     subject: Optional[str] = None,
+    grade: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve a list of available source documents."""
     doc_service = DocumentService()
-    return await doc_service.list_documents(db, tenant_id, subject)
+    return await doc_service.list_documents(db, tenant_id, subject, grade)
 
 @router.get(
     "/{document_id}",
@@ -99,3 +114,18 @@ async def get_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return doc
+
+@router.get(
+    "/{document_id}/chunks/count",
+    summary="Get the number of chunks in the vector store for a document",
+)
+async def get_document_chunk_count(document_id: str):
+    """Retrieve the total count of embeddings/chunks stored for the given document."""
+    from app.services.vector_store import get_vector_store
+    store = get_vector_store()
+    try:
+        count = await store.count_chunks(document_id)
+        return {"document_id": document_id, "chunk_count": count}
+    except Exception as e:
+        logger.error("Failed to count chunks for doc %s: %s", document_id, e)
+        raise HTTPException(status_code=500, detail="Error retrieving chunk count from vector store")

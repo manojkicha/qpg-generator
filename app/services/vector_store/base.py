@@ -68,6 +68,10 @@ class VectorStoreClient(ABC):
     ) -> list[VectorSearchResult]:
         """Retrieve the top_k most relevant chunks for a single document."""
 
+    @abstractmethod
+    async def count_chunks(self, document_id: str) -> int:
+        """Count the number of chunks stored for a given document."""
+
     async def close(self) -> None:
         """Release any held connections. Override where there's something to close."""
         return None

@@ -189,7 +189,8 @@ QUESTION_TYPE_INSTRUCTIONS: dict[str, str] = {
         "List the parts they should label in the answer key."
     ),
     "multiple_choice": (
-        "Provide a question stem and EXACTLY 4 options labelled (a), (b), (c), (d). "
+        "Provide a question stem and EXACTLY 4 options. "
+        "Return the options as a structured list in the 'options' field: ['(a) Option 1', '(b) Option 2', '(c) Option 3', '(d) Option 4']. "
         "All options should be plausible, with exactly one correct answer."
     ),
     "short_answer": (

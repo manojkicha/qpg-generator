@@ -77,6 +77,13 @@ class CompilationService:
             "duration_minutes": specification.get("duration_minutes", 180),
             "total_marks": specification.get("total_marks", 100),
             "total_questions": len(questions),
+            "logo_url": specification.get("logo_url", "file:///Users/kmanojkumar/Downloads/epublication_github/code/qpg-generator/input/logo.png"),
+            "general_instructions": specification.get("general_instructions", [
+                "Read all questions carefully before answering.",
+                "All questions are compulsory.",
+                "Ensure your handwriting is neat and legible."
+            ]),
+            "logo_url": specification.get("logo_url", "static/images/default_logo.png"),
             "version": 1,
             "specification_hash": self._hash_specification(specification),
             "questions": self._format_questions_for_paper(questions),
@@ -122,6 +129,7 @@ class CompilationService:
                 {
                     "id": q.get("id", f"q_{i+1}"),
                     "question_text": q.get("question_text", ""),
+                    "options": q.get("options", []),
                     "topic": q.get("topic", ""),
                     "question_type": q.get("question_type", "short_answer"),
                     "marks": q.get("marks", 10),

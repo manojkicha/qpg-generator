@@ -36,29 +36,30 @@ Uploads a PDF and indexes its content into the vector store.
 }
 ```
 
-### 1.2 List Documents
-Retrieves all documents available for a specific tenant.
-- **Endpoint:** `/documents/`
+### 1.2 List Subjects
+Retrieves all unique subjects available for a specific tenant and grade.
+- **Endpoint:** `/documents/subjects`
 - **Method:** `GET`
 - **Response Code:** `200 OK`
 
 **Query Parameters:**
 - `tenant_id`: (Required) The tenant identifier.
-- `subject`: (Optional) Filter documents by subject.
+- `grade`: (Required) The grade level (e.g., "1").
 
 **Response Body:**
 ```json
 [
-  {
-    "id": "uuid-1",
-    "filename": "chapter1.pdf",
-    "tenant_id": "tenant-id",
-    "subject": "EVS",
-    "grade": "Grade 1",
-    "uploaded_at": "ISO-8601 timestamp"
-  },
-  ...
+  { "subject": "Environmental Studies" },
+  { "subject": "Mathematics" },
+  { "subject": "English" }
 ]
+```
+
+### 1.3 List Documents
+Retrieve a list of available source documents.
+- **Endpoint:** `/documents/`
+- **Method:** `GET`
+- **Response Code:** `200 OK`
 ```
 
 ### 1.3 Get Document Details
@@ -66,6 +67,20 @@ Retrieves metadata for a specific document.
 - **Endpoint:** `/documents/{document_id}`
 - **Method:** `GET`
 - **Response Code:** `200 OK`
+
+### 1.4 Get Document Chunk Count
+Retrieves the total number of content chunks indexed in the vector store for a document. This is useful for verifying if a document was fully ingested.
+- **Endpoint:** `/documents/{document_id}/chunks/count`
+- **Method:** `GET`
+- **Response Code:** `200 OK`
+
+**Response Body:**
+```json
+{
+  "document_id": "uuid-string",
+  "chunk_count": 142
+}
+```
 
 ---
 

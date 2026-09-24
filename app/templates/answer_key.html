@@ -7,71 +7,117 @@
         @page {
             size: A4;
             margin: 2cm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9pt;
+                color: #777;
+            }
         }
         body {
-            font-family: 'Times New Roman', serif;
-            font-size: 11pt;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
             line-height: 1.5;
+            color: #000;
         }
         .header {
             text-align: center;
-            margin-bottom: 2em;
-            border-bottom: 2px solid #333;
+            border-bottom: 2px solid #c00;
+            margin-bottom: 1.5em;
             padding-bottom: 1em;
         }
         .confidential {
             color: #c00;
             font-weight: bold;
+            font-size: 14pt;
+            text-transform: uppercase;
             margin-bottom: 0.5em;
+            display: block;
+        }
+        .header h1 {
+            font-size: 22pt;
+            margin-bottom: 0.5em;
+            text-transform: uppercase;
+        }
+        .meta-info {
+            font-size: 11pt;
+            margin-bottom: 1em;
         }
         .answer {
-            margin-bottom: 1.5em;
+            margin-bottom: 2em;
             page-break-inside: avoid;
+            border-left: 3px solid #c00;
+            padding-left: 1em;
         }
         .answer-header {
             font-weight: bold;
+            font-size: 13pt;
             margin-bottom: 0.5em;
+            display: flex;
+            justify-content: space-between;
+        }
+        .answer-text {
+            margin-bottom: 0.8em;
+            text-align: justify;
         }
         .marking-scheme {
-            background: #f0f0f0;
-            padding: 0.5em;
-            margin-top: 0.5em;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 0.8em;
             font-size: 10pt;
+            border-radius: 4px;
+        }
+        .scheme-step {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #eee;
+            padding: 2px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 3em;
+            font-size: 9pt;
+            color: #999;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <p class="confidential">CONFIDENTIAL - FOR EXAMINER USE ONLY</p>
-        <h1>Answer Key</h1>
-        <p>Job ID: {{ answer_key.job_id }}</p>
-        <p>Total Questions: {{ answer_key.total_questions }} | Total Marks: {{ answer_key.total_marks }}</p>
-        {% if answer_key.negative_marking_enabled %}
-        <p>Negative Marking: {{ answer_key.negative_marks_per_wrong }} marks per wrong answer</p>
-        {% endif %}
+        <span class="confidential">CONFIDENTIAL - FOR EXAMINER USE ONLY</span>
+        <h1>Official Answer Key</h1>
+        <div class="meta-info">
+            <p><strong>Job ID:</strong> {{ answer_key.job_id }}</p>
+            <p><strong>Total Questions:</strong> {{ answer_key.total_questions }} | <strong>Total Marks:</strong> {{ answer_key.total_marks }}</p>
+            {% if answer_key.negative_marking_enabled %}
+            <p><strong>Negative Marking:</strong> {{ answer_key.negative_marks_per_wrong }} marks per wrong answer</p>
+            {% endif %}
+        </div>
     </div>
 
     {% for answer in answer_key.answers %}
     <div class="answer">
         <div class="answer-header">
-            Question {{ loop.index }} ({{ answer.marks }} marks)
+            <span>Question {{ loop.index }}</span>
+            <span>[{{ answer.marks }} marks]</span>
         </div>
         <div class="answer-text">
-            {{ answer.answer_outline or "See marking scheme below" }}
+            {{ answer.answer_outline or "See marking scheme below for detailed answer" }}
         </div>
         {% if answer.marking_scheme %}
         <div class="marking-scheme">
-            <strong>Marking Scheme:</strong>
+            <strong style="display: block; margin-bottom: 0.5em; color: #c00;">Detailed Marking Scheme:</strong>
             {% for step, marks in answer.marking_scheme.items() %}
-            <div>{{ step }}: {{ marks }} mark(s)</div>
+            <div class="scheme-step">
+                <span>{{ step }}</span>
+                <span><strong>{{ marks }} mark(s)</strong></span>
+            </div>
             {% endfor %}
         </div>
         {% endif %}
     </div>
     {% endfor %}
 
-    <div style="text-align: center; margin-top: 3em; font-size: 9pt; color: #999;">
-        Generated on {{ rendered_at.strftime('%Y-%m-%d %H:%M') }}
+    <div class="footer">
+        Generated on {{ rendered_at.strftime('%Y-%m-%d %H:%M') }} | Confidential Document
     </div>
 </body>
 </html>

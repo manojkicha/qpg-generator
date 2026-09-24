@@ -91,8 +91,14 @@ class ChromaStore(VectorStoreClient):
         collection = await self._get_collection(client)
 
         where_filter: dict | None = None
+        if document_id:
+            where_filter = {"source_document_id": {"$eq": document_id}}
+
         if filter_category is not None:
-            where_filter = {"topic": {"$eq": filter_category}}
+            if where_filter is None:
+                where_filter = {"topic": {"$eq": filter_category}}
+            else:
+                where_filter["topic"] = {"$eq": filter_category}
 
         results = await asyncio.to_thread(
             collection.query,
@@ -126,6 +132,24 @@ class ChromaStore(VectorStoreClient):
 
         logger.info("Chroma search returned %d results", len(search_results))
         return search_results
+
+    async def count_chunks(self, document_id: str) -> int:
+        """Count the number of chunks for a specific document."""
+        client = await self._get_client()
+        collection = await self._get_collection(client)
+
+        count = await asyncio.to_thread(
+            collection.count(), # Chroma's count() doesn't support where filters in all versions,
+                                # so we might need to get all and filter or use get()
+        )
+        # Correct way to count with filter in Chroma:
+        results = await asyncio.to_thread(
+            collection.get(
+                where={"source_document_id": {"$eq": document_id}},
+                include=[]
+            )
+        )
+        return len(results.get("ids", []))
 
     async def close(self) -> None:
         if self._client is not None:

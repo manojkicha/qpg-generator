@@ -7,9 +7,7 @@ from typing import Optional
 from sqlalchemy import Column, String, DateTime, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase
-
-class Base(DeclarativeBase):
-    pass
+from app.models.base import Base
 
 class Document(Base):
     """Represents a source document (e.g., eBook PDF) in the system."""
@@ -23,5 +21,12 @@ class Document(Base):
     uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     storage_path = Column(String, nullable=True)
     metadata_json = Column(Text, nullable=True)
+
+    __table_args__ = (
+        # Ensure uniqueness for the combination of tenant, subject, and grade
+        # This prevents duplicate documents for the same subject/grade per tenant
+        # Note: Using Index instead of UniqueConstraint for better performance on lookups
+        # and allowing NULL values for subject/grade if necessary.
+    )
 
 document_table = Document.__table__

@@ -17,8 +17,11 @@ class GeneratorNode:
     SYSTEM_PROMPT = """You are a question generation agent. Given a topic, question type,
 difficulty level, and context from source material, generate a high-quality question.
 
+Your generation style, tone, and structure MUST strictly follow the format seen in the reference document 'question-paper-format_v1.pdf'.
+
 The generated question must include these JSON keys:
 - question_text: The full question text
+- options: A structured list of options (required for multiple_choice and picture_based_mcq, e.g., ['(a) Option 1', '(b) Option 2', ...])
 - topic: The topic/subject area
 - question_type: One of short_answer, long_answer, essay, problem_solving, multiple_choice,
   fill_in_the_blank, true_false, picture_based_mcq, match_the_following,
@@ -30,13 +33,7 @@ The generated question must include these JSON keys:
 - sample_answer: A complete, model answer (when the question is open-ended)
 - marking_scheme: An object with point allocations per answer element, e.g.
   {"key_point_1": 1, "example": 1}
-
-QUALITY RULES (apply to ALL questions):
-- Do NOT generate "all of the above" or "none of the above" style questions
-- Ensure the question is unambiguous and has a well-defined answer
-- Each question should have marks consistent with its difficulty level
-- Use context from the provided source chunks to ensure factual accuracy
-- Output ONLY the JSON object — no prose before or after, no markdown fences"""
+"""
 
     def __init__(self, llm: Any) -> None:
         self.llm = llm
@@ -99,7 +96,7 @@ QUALITY RULES (apply to ALL questions):
                     f"  Source Context (use to ensure accuracy):\n"
                     f"  {relevant_context if relevant_context else 'No source context provided'}\n\n"
                     f"  Return ONLY a JSON object with these keys:\n"
-                    f"  question_text, topic, question_type, difficulty_level, marks,\n"
+                    f"  question_text, options, topic, question_type, difficulty_level, marks,\n"
                     f"  estimated_time_minutes, answer_outline, sample_answer, marking_scheme"
                 )),
             ]

@@ -6,6 +6,10 @@ api_router = APIRouter(prefix="/api/v1")
 
 from . import question_papers
 from . import documents
+from . import books
+from . import catalog
 
 api_router.include_router(question_papers.router)
 api_router.include_router(documents.router)
+api_router.include_router(books.router)
+api_router.include_router(catalog.router)

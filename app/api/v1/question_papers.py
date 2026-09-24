@@ -209,10 +209,15 @@ async def run_generation_pipeline_from_pdf(job_id: str, job_record: dict) -> Non
         job_record["current_step"] = "ingestion"
         job_record["progress_percentage"] = 10
 
+        from uuid import UUID
+        standard_doc_id = str(UUID(job_record["source_document_id"]))
+        document_path = data_dir / f"{standard_doc_id}.pdf"
+        document_path.write_bytes(job_record.pop("pdf_bytes", b""))
+
         ingestion = IngestionService()
         try:
             chunk_ids = await ingestion.process_document(
-                document_id=job_record["source_document_id"],
+                document_id=standard_doc_id,
                 document_path=str(document_path),
                 page_start=job_record.get("page_start", 1),
                 page_end=job_record.get("page_end"),
@@ -473,7 +478,7 @@ async def run_generation_pipeline_from_blob(job_id: str, job_record: dict) -> No
             query = f"{spec.get('subject', '')} {spec.get('title', '')}"
             search_results = await search.hybrid_search(
                 query=query,
-                document_id=document_id,
+                document_id=job_record["source_document_id"],
                 top_k=5,
             )
 
@@ -619,44 +624,15 @@ async def run_generation_pipeline(job_id: str, job_record: dict) -> None:
     from app.services.storage_service import StorageService
 
     try:
-        # Update status: ingesting
-        job_record["status"] = "ingesting"
-        job_record["current_step"] = "ingestion"
-        job_record["progress_percentage"] = 10
+        # Step 1: Ingestion - ONLY run if document is not already indexed
+        # For the standard /generate endpoint, we assume it's already ingested.
+        # If we find the document is missing from vector store, we could re-ingest,
+        # but typically this endpoint should skip straight to generation.
 
-        # Step 1: Ingestion — try a few common file locations
-        ingestion = IngestionService()
-        try:
-            document_id = job_record["source_document_id"]
-            # Try multiple paths
-            candidate_paths = [
-                f"data/{document_id}.pdf",
-                f"data/{document_id}",
-                f"data/sample-maths.pdf",  # Fallback for testing
-            ]
-            document_path = None
-            for path in candidate_paths:
-                import os
-                if os.path.exists(path):
-                    document_path = path
-                    break
+        job_record["status"] = "generating"
+        job_record["current_step"] = "generation"
+        job_record["progress_percentage"] = 40
 
-            if not document_path:
-                raise FileNotFoundError(
-                    f"No document found for {document_id} (tried: {candidate_paths})"
-                )
-
-            chunk_ids = await ingestion.process_document(
-                document_id=document_id,
-                document_path=document_path,
-                page_start=job_record.get("page_start", 1),
-                page_end=job_record.get("page_end"),
-                ocr_dpi=job_record.get("ocr_dpi", 200),
-            )
-        finally:
-            await ingestion.close()
-
-        # Update status: generating
         job_record["status"] = "generating"
         job_record["current_step"] = "generation"
         job_record["progress_percentage"] = 40
@@ -671,7 +647,7 @@ async def run_generation_pipeline(job_id: str, job_record: dict) -> None:
             query = f"{spec.get('subject', '')} {spec.get('title', '')}"
             search_results = await search.hybrid_search(
                 query=query,
-                document_id=document_id,
+                document_id=job_record["source_document_id"],
                 top_k=5,
             )
             # Convert to (content, metadata) tuples for the agent

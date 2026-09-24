@@ -16,9 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase as Base_cls
-
-class Base(Base_cls):
-    pass
+from app.models.base import Base
 
 
 class ChunkMetadata:
