@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-WORKDIR /app
+WORKDIR /home/appuser/app
 
 # Install system dependencies for weasyprint, paddleocr, and opencv
 # weasyprint requires pango, cairo, etc.

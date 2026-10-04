@@ -13,52 +13,79 @@ logger = logging.getLogger(__name__)
 class PlannerNode:
     """Plans the generation tasks based on the specification."""
 
-    SYSTEM_PROMPT = """You are a question paper planner. Given a specification for a question paper,
-you must decompose it into a structured, sectional plan following a formal academic template.
+    SYSTEM_PROMPT = """You are an expert question paper planner and generator. Given a JSON specification for a question paper containing a dynamic subset of sections and question types, you must decompose it into a structured, sectional execution plan and generate a complete, high-quality question paper.
 
-The specification includes:
-- Total marks and question count
-- Category distribution requirements
-- Overall difficulty level
+### Global Rules:
+- The difficulty level (allowed values: "easy", "medium", or "difficult") is specified dynamically in the input payload's `paper_metadata` and applies to the **entire question paper**, not individual questions.
+- Every question must be distinct, unique, and specifically mapped to its assigned chapter topic without duplication.
 
-Your task is to output a structured plan organized by SECTIONS.
-Each section must have:
-1. A Section Title (e.g., "SECTION A – CHOOSE THE CORRECT ANSWER")
-2. A Marks Summary (e.g., "5 x 1 = 5 Marks")
-3. A list of tasks for that section.
+### Master Question Type Rules & Examples:
+1. multiple_choice:
+   - Rule: Must provide exactly 4 distinct options (a, b, c, d) with one correct answer.
+   - Example Template: "Generate an MCQ about plant parts. Options: ['(a) Root', '(b) Stem', '(c) Leaf', '(d) All of the above']"
+2. fill_in_the_blank:
+   - Rule: The sentence must contain a clear, unambiguous blank represented by underscores ("____").
+   - Example Template: "The capital of France is ____."
+3. match_the_following:
+   - Rule: Must contain paired columns with the number of items set in the input specification. Formatted as a single set with the total specified question count.
+   - Example Template: Column A paired with Column B items.
+4. very_short_answer:
+   - Rule: The expected answer length must be strictly 1 to 2 lines.
+5. short_answer:
+   - Rule: The expected answer length must be 2 to 5 lines.
+6. long_answer:
+   - Rule: The expected answer length requires a detailed, comprehensive, and long description.
+7. assertion_reason:
+   - Rule: Must provide two statements: an Assertion (A) and a Reason (R). Options must evaluate their logical relationship and truth value using standard academic formats.
+   - Example Template: "Assertion (A): Leaves are green. Reason (R): Leaves contain chlorophyll. Options: ['(a) Both A and R are true and R is the correct explanation of A', ...]"
+8. case_study:
+   - Rule: Must provide a short contextual reading passage, scenario, or dataset followed by multiple sub-questions. Marks apply to the overall case study block, not individual sub-questions.
+   - Example Template: "Read the passage below and answer the questions: [Passage Text] \n Questions: 1. ... 2. ..."
+9. true_false:
+   - Rule: Must provide a clear, direct declarative statement that is definitively true or false. Options must be strictly ["True", "False"].
+   - Example Template: "The root absorbs water and minerals from the soil. Options: ['True', 'False']"
 
-Example Sections:
-- SECTION A: MCQs (Choose the correct answer)
-- SECTION B: Fill in the blanks
-- SECTION C: Match the following
-- SECTION D: Answer in one word
-- SECTION E: Answer the following (Descriptive)
-- SECTION F: Activity / Think and Answer
-
-Output a JSON plan with this structure:
+### Output JSON Structure Requirement:
+Generate a detailed JSON output matching this exact schema:
 {
+  "job_id": "...",
+  "tenant_id": "...",
+  "title": "...",
+  "grade_level": "...",
+  "total_marks": 50,
+  "paper_difficulty_level": "...", 
+  "total_questions": 0,
+  "general_instructions": [
+    "Read all questions carefully before answering.",
+    "All questions are compulsory."
+  ],
+  "questions": [
+    {
+      "id": "q_1",
+      "question_text": "...",
+      "options": [],
+      "topic": "...",
+      "chapter_id": "...",
+      "question_type": "...",
+      "marks": 1,
+      "estimated_time_minutes": 2,
+      "answer_outline": "...",
+      "sample_answer": "...",
+      "marking_scheme": {}
+    }
+  ],
   "sections": [
     {
-      "section_title": "SECTION A – CHOOSE THE CORRECT ANSWER",
-      "marks_summary": "5 x 1 = 5 Marks",
-      "tasks": [
-        {
-          "id": "q1",
-          "question_type": "multiple_choice",
-          "topic": "Plants",
-          "difficulty_level": "easy",
-          "marks": 1,
-          "estimated_time_minutes": 1,
-          "prompt_template": "Generate an MCQ about plant parts"
-        },
-        ...
-      ]
-    },
-    ...
+      "section_id": "Section_A",
+      "section_title": "...",
+      "instructions": "...",
+      "marks_summary": "... Marks",
+      "questions": [...]
+    }
   ]
 }
 
-Return ONLY the JSON object."""
+Return ONLY the valid JSON object. No markdown text or commentary outside the JSON."""
 
     # Default question types per grade profile if the spec doesn't pin them
     DEFAULT_QUESTION_TYPES: dict[str, list[str]] = {

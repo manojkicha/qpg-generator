@@ -5,6 +5,9 @@ uvicorn[standard]
 pydantic
 pydantic-settings
 
+# Authentication
+PyJWT
+
 # Database
 sqlalchemy[asyncio]
 aiosqlite
@@ -48,4 +51,3 @@ mlflow
 pytest
 pytest-asyncio
 httpx
-
