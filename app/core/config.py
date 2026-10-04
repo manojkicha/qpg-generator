@@ -11,34 +11,31 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     # ─── LLM Provider Selection ────────────────────────────────────────────────
-    # Set to "ollama" or "openai" (or "azure_openai")
+    # Set to "ollama" or "openai"
     llm_provider: str = "ollama"
 
     # ─── Ollama Settings ───────────────────────────────────────────────────────
     ollama_base_url: str = "http://localhost:11434"
-    # Use a general-purpose (non-code-specialized) model for question generation.
-    # Code-specialized models tend to over-format and under-emphasize pedagogy.
     ollama_model: str = "llama3:8b"
     ollama_temperature: float = 0.7
+    ollama_embedding_model: str = "nomic-embed-text"
 
     # ─── OpenAI / Azure OpenAI Settings ────────────────────────────────────────
-    # For OpenAI: set openai_api_key
-    # For Azure OpenAI: set azure_* fields
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"
     openai_base_url: str = ""  # Optional: custom OpenAI-compatible base URL
+    openai_embedding_model: str = "text-embedding-3-small"
 
     # Azure OpenAI
     azure_openai_endpoint: str = ""
     azure_openai_api_key: str = ""
     azure_openai_deployment: str = "gpt-4o"
     azure_openai_embedding_deployment: str = "text-embedding-3-small"
-    azure_openai_api_version: str = "2024-02-01"
+    azure_openai_api_version: str = "2024-08-01-preview"
 
     # ─── Embedding Settings ────────────────────────────────────────────────────
-    # Set to "ollama" (for local embeddings) or "openai"
+    # Set to "ollama" or "openai"
     embedding_provider: str = "ollama"
-    openai_embedding_model: str = "text-embedding-3-small"
 
     # ─── Azure Document Intelligence ───────────────────────────────────────────
     azure_doc_intel_endpoint: str = ""
@@ -69,10 +66,11 @@ class Settings(BaseSettings):
 
     # ─── Azure Blob Storage ────────────────────────────────────────────────────
     azure_storage_connection_string: str = ""
+    blob_connection_string: str = ""
     azure_blob_container: str = "source-documents"
 
     # ─── Database ──────────────────────────────────────────────────────────────
-    database_url: str = "sqlite+aiosqlite:///./data/question_paper.db"
+    database_url: str = "sqlite+aiosqlite:///question_paper.db"
     redis_url: str = "redis://localhost:6379/0"
 
     # ─── Langfuse ──────────────────────────────────────────────────────────────
@@ -86,6 +84,8 @@ class Settings(BaseSettings):
     # ─── Application ────────────────────────────────────────────────────────────
     environment: str = "development"
     log_level: str = "INFO"
+    secret_key: str
+
 
 
 @lru_cache()

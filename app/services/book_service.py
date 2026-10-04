@@ -64,8 +64,14 @@ class BookService:
 
     async def list_grades(self, session: AsyncSession, tenant_id: str) -> List[str]:
         """Lists all distinct grades that have READY books for the tenant."""
+        from uuid import UUID
+        try:
+            t_id = UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+        except ValueError:
+            return []
+
         query = select(distinct(Book.grade)).where(
-            Book.tenant_id == tenant_id,
+            Book.tenant_id == t_id,
             Book.status == BookStatus.READY
         )
         result = await session.execute(query)
@@ -73,8 +79,14 @@ class BookService:
 
     async def list_subjects(self, session: AsyncSession, tenant_id: str, grade: str) -> List[str]:
         """Lists all distinct subjects for a tenant and grade with READY books."""
+        from uuid import UUID
+        try:
+            t_id = UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+        except ValueError:
+            return []
+
         query = select(distinct(Book.subject)).where(
-            Book.tenant_id == tenant_id,
+            Book.tenant_id == t_id,
             Book.grade == grade,
             Book.status == BookStatus.READY
         )
@@ -83,8 +95,14 @@ class BookService:
 
     async def list_books(self, session: AsyncSession, tenant_id: str, grade: str, subject: str) -> List[BookResponse]:
         """Lists all READY books for a tenant, grade, and subject."""
+        from uuid import UUID
+        try:
+            t_id = UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+        except ValueError:
+            return []
+
         query = select(Book).where(
-            Book.tenant_id == tenant_id,
+            Book.tenant_id == t_id,
             Book.grade == grade,
             Book.subject == subject,
             Book.status == BookStatus.READY

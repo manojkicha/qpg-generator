@@ -25,7 +25,13 @@ class ValidatorNode:
         if not questions and state.get("generated_question"):
             questions = [state["generated_question"]]
 
-        spec = state.get("specification", {})
+        spec_obj = state.get("specification", {})
+        if hasattr(spec_obj, "model_dump"):
+            spec = spec_obj.model_dump()
+        elif isinstance(spec_obj, dict):
+            spec = spec_obj
+        else:
+            spec = {}
 
         logger.info("Validating %d questions", len(questions))
 
@@ -38,7 +44,16 @@ class ValidatorNode:
                 "passed": len(issues) == 0,
             })
 
-        # Determine overall validation
+        # Sectional and Global Integrity Check
+        integrity_issues = self._check_overall_integrity(questions, spec)
+
+        # If there are global integrity issues, we mark all as failed or flag them
+        # For this implementation, we add integrity issues to each question for visibility
+        for r in validation_results:
+            if integrity_issues:
+                r["issues"].extend(integrity_issues)
+                r["passed"] = False
+
         all_passed = all(r["passed"] for r in validation_results)
         flags = [issue for r in validation_results for issue in r["issues"]]
 
@@ -70,6 +85,47 @@ class ValidatorNode:
             ],
         }
 
+    def _check_overall_integrity(self, questions: list[dict], spec: dict) -> list[str]:
+        """Checks if the overall generated set matches the section/chapter specs."""
+        issues = []
+        sections_spec = spec.get("sections", [])
+        if not sections_spec:
+            return issues
+
+        # 1. Validate Total Marks
+        meta = spec.get("paper_metadata", {})
+        expected_total_marks = meta.get("total_marks", 0)
+        actual_total_marks = sum(q.get("marks", 0) for q in questions)
+        if expected_total_marks > 0 and actual_total_marks != expected_total_marks:
+            issues.append(f"Total marks mismatch: expected {expected_total_marks}, got {actual_total_marks}")
+
+        # 2. Validate Sectional Counts
+        for s_spec in sections_spec:
+            s_id = s_spec.get("section_id")
+            s_title = s_spec.get("section_title")
+            expected_count = s_spec.get("total_questions_to_generate", 0)
+
+            # Count questions assigned to this section
+            actual_count = sum(1 for q in questions if q.get("section_title") == s_title)
+            if actual_count != expected_count:
+                issues.append(f"Section {s_title} count mismatch: expected {expected_count}, got {actual_count}")
+
+            # 3. Validate Chapter Distribution within Section
+            topic_dist = s_spec.get("topic_distribution", [])
+            for dist in topic_dist:
+                c_id = dist.get("chapter_id")
+                c_name = dist.get("chapter_name")
+                expected_c_count = dist.get("question_count", 0)
+
+                actual_c_count = sum(
+                    1 for q in questions
+                    if q.get("section_title") == s_title and (q.get("chapter_id") == c_id or q.get("topic") == c_name)
+                )
+                if actual_c_count != expected_c_count:
+                    issues.append(f"Chapter {c_name} ({c_id}) in {s_title} count mismatch: expected {expected_c_count}, got {actual_c_count}")
+
+        return issues
+
     def _check_question(self, question: dict, spec: dict) -> list[str]:
         """Check a single question for validation issues."""
         issues: list[str] = []
@@ -90,17 +146,30 @@ class ValidatorNode:
         if question_text:
             issues.extend(self._check_question_quality(question_text))
 
-        # Check that marks are consistent with spec
+        # Check that marks are consistent with section spec
         if marks is not None:
-            spec_total = spec.get("total_marks", 0)
-            spec_count = spec.get("question_count", 0)
-            if spec_count > 0 and spec_total > 0:
-                # Marks per question shouldn't exceed reasonable bounds
-                max_reasonable = spec_total // spec_count * 3  # Allow 3x average
-                if marks > max_reasonable:
-                    issues.append(
-                        f"Marks ({marks}) too high relative to spec average"
-                    )
+            section_title = question.get("section_title")
+            sections = spec.get("sections", [])
+            matching_section = next((s for s in sections if s.get("section_title") == section_title), None)
+            if matching_section:
+                expected_marks = matching_section.get("marks_per_question")
+                if expected_marks and marks != expected_marks:
+                    issues.append(f"Marks ({marks}) mismatch with section spec ({expected_marks})")
+
+        # Validate 'Match the Following' format
+        if question.get("question_type") == "match_the_following":
+            options = question.get("options", [])
+            if not options or not isinstance(options, list):
+                issues.append("Match the following must have a list of options")
+            elif not all(isinstance(opt, dict) and "left" in opt and "right" in opt for opt in options):
+                issues.append("Match the following options must be a list of objects with 'left' and 'right' keys")
+
+        # Validate 'Fill in the Blanks' (and others) have NO options
+        no_options_types = ["fill_in_the_blank", "short_answer", "long_answer", "one_word_answer", "essay"]
+        if question.get("question_type") in no_options_types:
+            options = question.get("options", [])
+            if options and len(options) > 0:
+                issues.append(f"Question type {question.get('question_type')} should not have options")
 
         return issues
 

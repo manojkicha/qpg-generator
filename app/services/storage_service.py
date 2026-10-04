@@ -29,9 +29,12 @@ class StorageService:
 
     async def get_client(self) -> BlobServiceClient:
         if self._client is None:
-            self._client = BlobServiceClient.from_connection_string(
-                settings.azure_storage_connection_string
-            )
+            conn_str = settings.blob_connection_string or settings.azure_storage_connection_string
+            if not conn_str:
+                logger.error("Azure Storage connection string is missing in settings")
+                raise ValueError("Azure Storage connection string is not configured. Please check your .env file.")
+
+            self._client = BlobServiceClient.from_connection_string(conn_str)
         return self._client
 
     async def upload_document(
@@ -41,11 +44,21 @@ class StorageService:
         data: bytes,
         overwrite: bool = True,
     ) -> str:
-        """Upload a document to blob storage and return its URL."""
+        """Upload a document to blob storage and return its URL.
+        Automatically creates the container if it doesn't exist.
+        """
         logger.info("Uploading %s to container %s", blob_name, container_name)
 
         client = await self.get_client()
         container = client.get_container_client(container_name)
+
+        try:
+            await container.create_container()
+            logger.info("Created container %s", container_name)
+        except Exception as e:
+            # Container already exists or other error
+            if "ContainerAlreadyExists" not in str(e):
+                logger.debug("Container creation notice: %s", e)
 
         await container.upload_blob(
             name=blob_name,

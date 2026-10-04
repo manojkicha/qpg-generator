@@ -1,7 +1,7 @@
 """Pydantic schemas for API request/response validation."""
 
 from .specification import (
-    CategoryDistribution,
+    TopicDistribution,
     MarkDistribution,
     Specification,
     SpecificationCreate,
@@ -17,7 +17,7 @@ from .job import JobCreate, JobResponse, JobStatusResponse
 from .chunk import ChunkResponse
 
 __all__ = [
-    "CategoryDistribution",
+    "TopicDistribution",
     "MarkDistribution",
     "PDFGenerationResponse",
     "Specification",

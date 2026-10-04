@@ -6,27 +6,15 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-class CategoryDistribution(BaseModel):
-    """Distribution of questions across categories/topics."""
-
-    category_name: str = Field(..., description="Name of the category/topic")
-    min_questions: int = Field(
-        ge=0, description="Minimum number of questions from this category"
-    )
-    max_questions: int = Field(
-        ge=0, description="Maximum number of questions from this category"
-    )
-    min_marks: int = Field(
-        ge=0, description="Minimum total marks from this category"
-    )
-    max_marks: int = Field(
-        ge=0, description="Maximum total marks from this category"
-    )
+class TopicDistribution(BaseModel):
+    """Distribution of questions across specific chapters/topics."""
+    chapter_id: str = Field(..., description="Unique ID of the chapter (e.g., Ch_1)")
+    chapter_name: str = Field(..., description="Name of the chapter")
+    question_count: int = Field(ge=0, description="Number of questions to generate from this chapter")
 
 
 class MarkDistribution(BaseModel):
     """Overall mark distribution for the question paper."""
-
     total_marks: int = Field(
         ge=1, description="Total marks the paper should contain"
     )
@@ -44,89 +32,64 @@ class MarkDistribution(BaseModel):
     )
 
 
-class QuestionSpecification(BaseModel):
-    """Specification for a single question generation."""
-
-    # Question type — covers both generic academic types and primary-school (Grade 1 EVS) types.
-    # Valid values:
-    #   Generic:  short_answer, long_answer, essay, problem_solving, multiple_choice
-    #   Grade 1:  fill_in_the_blank, true_false, picture_based_mcq, match_the_following,
-    #             one_word_answer, tick_the_correct, draw_and_label
+class SectionSpecification(BaseModel):
+    """Specification for a single section of the question paper."""
+    section_id: str = Field(..., description="Unique ID of the section (e.g., Section_A)")
+    section_title: str = Field(..., description="Title of the section")
     question_type: str = Field(
         ...,
-        description=(
-            "Type of question. Common values: short_answer, long_answer, essay, "
-            "problem_solving, multiple_choice, fill_in_the_blank, true_false, "
-            "picture_based_mcq, match_the_following, one_word_answer, "
-            "tick_the_correct, draw_and_label"
-        ),
+        description="Type of question. Values: multiple_choice, fill_in_the_blanks, match_the_following, picture_based, very_short_answer, short_answer, long_answer"
     )
-    topic: str = Field(..., description="Topic/subject area")
-    difficulty_level: str = Field(
+    total_questions_to_generate: int = Field(ge=1, description="Total number of questions to be generated in this section")
+    mandatory_to_answer: int = Field(ge=1, description="Number of questions the student must answer")
+    marks_per_question: int = Field(ge=1, description="Marks allocated to each question in this section")
+    instructions: Optional[str] = Field(None, description="Specific instructions for this section (e.g., 'Answer any 3 out of 5')")
+    topic_distribution: List[TopicDistribution] = Field(
+        ..., description="Breakdown of questions per chapter within this section"
+    )
+
+
+class PaperMetadata(BaseModel):
+    """High-level metadata for the question paper."""
+    title: str = Field(..., description="Paper title")
+    grade_level: str = Field(..., description="Grade level (e.g., Primary Level)")
+    total_marks: int = Field(ge=1, description="Total marks for the entire paper")
+    paper_difficulty_level: str = Field(
         default="medium",
         pattern="^(easy|medium|hard)$",
-        description="Difficulty level",
+        description="Overall difficulty level"
     )
-    estimated_time_minutes: int = Field(
-        ge=1, default=5, description="Estimated time to answer"
-    )
-    marks: int = Field(ge=1, default=10, description="Marks allocated")
-    prompt_template: str = Field(
-        ..., description="Prompt template for the generation agent"
-    )
-    validation_rules: Optional[List[str]] = Field(
-        default=None, description="Rules the generated question must satisfy"
-    )
+
+
+class PaperConstraints(BaseModel):
+    """Global constraints for the generation process."""
+    ensure_distinct_questions: bool = Field(default=True, description="Ensure no duplicate questions are generated")
+    strict_chapter_mapping: bool = Field(default=True, description="Strictly adhere to the chapter mapping provided")
+    avoid_overlapping_concepts_across_sections: bool = Field(default=True, description="Avoid repeating concepts in different sections")
 
 
 class Specification(BaseModel):
     """Full AI specification for question paper generation."""
-
-    title: str = Field(..., description="Paper title")
-    subject: str = Field(..., description="Subject area (e.g., Mathematics, Physics)")
-    academic_year: str = Field(..., description="Academic year (e.g., 2026)")
-    duration_minutes: int = Field(
-        ge=1, description="Paper duration in minutes"
-    )
-    total_marks: int = Field(ge=1, default=100, description="Total paper marks")
-    difficulty_level: str = Field(
-        default="medium",
-        pattern="^(easy|medium|hard)$",
-        description="Overall difficulty level for the paper",
-    )
-    question_count: int = Field(
-        ge=1, description="Number of questions to generate"
-    )
-    category_distribution: List[CategoryDistribution] = Field(
-        default_factory=list,
-        description="Distribution of questions across categories",
-    )
-    mark_distribution: MarkDistribution = Field(default_factory=MarkDistribution)
-    questions: List[QuestionSpecification] = Field(
-        default_factory=list, description="Individual question specs"
-    )
-    metadata: Optional[dict] = Field(
-        default=None, description="Additional metadata"
-    )
+    paper_metadata: PaperMetadata = Field(..., description="Metadata about the paper")
+    constraints: PaperConstraints = Field(default_factory=PaperConstraints, description="Global generation constraints")
+    sections: List[SectionSpecification] = Field(..., description="List of sections defining the paper structure")
 
     @property
-    def total_category_questions_min(self) -> int:
-        return sum(c.min_questions for c in self.category_distribution)
+    def total_requested_questions(self) -> int:
+        return sum(s.total_questions_to_generate for s in self.sections)
 
     @property
-    def total_category_questions_max(self) -> int:
-        return sum(c.max_questions for c in self.category_distribution)
+    def calculated_total_marks(self) -> int:
+        return sum(s.total_questions_to_generate * s.marks_per_question for s in self.sections)
 
 
 class SpecificationCreate(Specification):
     """Schema for creating a specification via API."""
-
     pass
 
 
 class QuestionPaperValidationSummary(BaseModel):
     """Summary of validation results for a generated question paper."""
-
     requested_questions: int
     generated_questions: int
     requested_marks: int
@@ -136,7 +99,6 @@ class QuestionPaperValidationSummary(BaseModel):
 
 class QuestionPaperCreate(BaseModel):
     """Schema for creating a question paper generation request."""
-
     source_document_id: str = Field(
         ..., description="ID of the source eBook document"
     )

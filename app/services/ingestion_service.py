@@ -117,7 +117,7 @@ class IngestionService:
         Tries in order:
         1. Azure Document Intelligence (if credentials configured)
         2. Local PyMuPDF (for text-based PDFs)
-        3. OCR via PaddleOCR → Tesseract (for scanned/image-only PDFs)
+        3. OCR via PaddleOCR -> Tesseract (for scanned/image-only PDFs)
 
         Args:
             document_id: Identifier for the document
@@ -141,8 +141,8 @@ class IngestionService:
             return content
 
         # No text. Two possibilities:
-        #   (a) Scanned/image-only PDF — OCR should be able to read it.
-        #   (b) Corrupt PDF where zlib streams are broken — OCR will also fail
+        #   (a) Scanned/image-only PDF - OCR should be able to read it.
+        #   (b) Corrupt PDF where zlib streams are broken - OCR will also fail
         #       because rendered pages come out blank. We try anyway so the
         #       user gets the most informative error message possible.
         if content.corruption_detected:
@@ -152,7 +152,7 @@ class IngestionService:
             )
         else:
             logger.warning(
-                "No text extracted from %s — PDF appears to be scanned/image-only, using OCR",
+                "No text extracted from %s - PDF appears to be scanned/image-only, using OCR",
                 document_id,
             )
         return await self._extract_with_ocr(
@@ -222,9 +222,6 @@ class IngestionService:
         # extracted no text from any of the attempted pages, the file is very
         # likely corrupt at the binary level (e.g., zlib streams replaced with
         # UTF-8 replacement chars by a non-binary-safe transfer).
-        #
-        # We can't always catch this from MuPDF exceptions — sometimes MuPDF
-        # just logs to stderr and returns empty strings.
         file_size = os.path.getsize(document_path) if os.path.exists(document_path) else 0
         if (
             not all_text.strip()
@@ -254,7 +251,7 @@ class IngestionService:
     async def _extract_with_ocr(
         self, document_id: str, document_path: str, start_page: int = 1, end_page: Optional[int] = None, dpi: int = 200
     ) -> ExtractedContent:
-        """Extract text using OCR (PaddleOCR → Tesseract).
+        """Extract text using OCR (PaddleOCR -> Tesseract).
 
         This handles scanned/image-only PDFs that have no selectable text.
         Renders each page to an image and runs OCR with heading detection.
@@ -276,7 +273,6 @@ class IngestionService:
 
         if not result.pages:
             logger.error("OCR returned no results for %s", document_id)
-            # Zero pages could mean the file is so broken that even rendering fails.
             return ExtractedContent(
                 document_id=document_id,
                 content="",
@@ -369,7 +365,7 @@ class IngestionService:
         buffer: list[str] = []
         page_start = 1
 
-        heading_pattern = re.compile(r"^(Chapter|Section|Topic|Module|Part)\s+\d+[:.]?\s*", re.IGNORECASE)
+        heading_pattern = re.compile(r"^((Chapter|Section|Topic|Module|Part)\s+\d+|^\d+[\s.:])\s*", re.IGNORECASE)
         subheading_pattern = re.compile(r"^\d+\.\d+\s+", re.IGNORECASE)
 
         for page_num, text in pages_data:
@@ -423,8 +419,8 @@ class IngestionService:
     ) -> List[tuple[str, ChunkMetadata]]:
         """Split document into chunks by structural boundaries.
 
-        Splits by heading levels so each chunk carries chapter/topic metadata
-        — this is what enables "N questions from Chapter 3" category distribution.
+        Fallback: If structural chunking is too sparse (<= 2 chunks for a multi-page doc),
+        force a split every 2 pages to ensure retrieval granularity.
         """
         chunks: list[tuple[str, ChunkMetadata]] = []
         current_heading_path: list[str] = []
@@ -441,13 +437,12 @@ class IngestionService:
                 if heading_level > 0 and len(text.strip()) > 3:
                     # Flush previous chunk
                     if current_content:
-                        chunks.append(
-                            self._create_chunk(
-                                current_content,
-                                current_metadata,
-                                max_chunk_size,
-                            )
+                        chunk_list = self._create_chunk(
+                            current_content,
+                            current_metadata,
+                            max_chunk_size,
                         )
+                        chunks.extend(chunk_list)
                         current_content = []
 
                     # Update heading path
@@ -473,22 +468,56 @@ class IngestionService:
 
         # Flush remaining content
         if current_content:
-            chunks.append(
-                self._create_chunk(current_content, current_metadata, max_chunk_size)
-            )
+            chunk_list = self._create_chunk(current_content, current_metadata, max_chunk_size)
+            chunks.extend(chunk_list)
+
+        # --- ABSOLUTE FALLBACK MECHANISM ---
+        # If we have very few chunks for a large document, the structural detection failed.
+        # Force split every 2 pages to guarantee granular context for the generator.
+        if len(chunks) <= 2 and (result.pages and len(result.pages) > 2):
+            logger.info("Structural chunking too sparse (%d chunks); forcing split every 2 pages.", len(chunks))
+            page_chunks = []
+            # Group pages in pairs
+            for i in range(0, len(result.pages), 2):
+                page_group = result.pages[i : i + 2]
+                group_text = "\n".join([
+                    "\n".join([line.content for line in p.lines if line.content])
+                    for p in page_group
+                ])
+
+                start_page = page_group[0].page_number
+                end_page = page_group[-1].page_number
+
+                page_chunks.append((
+                    group_text,
+                    ChunkMetadata(
+                        chapter=f"Pages {start_page}-{end_page}",
+                        page_range=(start_page, end_page)
+                    )
+                ))
+            chunks = page_chunks
 
         logger.info("Document %s chunked into %d pieces", document_id, len(chunks))
         return chunks
 
     def _get_heading_level(self, line) -> int:
-        """Detect heading level from font size or style — heuristic."""
-        if not hasattr(line, "kind") or line.kind is None:
-            return 0
-        # Document Intelligence marks headings as "heading" kind
-        # We map by confidence or font size heuristic
-        if line.kind == "heading":
-            # Use span to find estimated level from font size
+        """Detect heading level from font size, style, or text patterns."""
+        # 1. Try Azure's built-in heading detection
+        if hasattr(line, "kind") and line.kind == "heading":
             return self._estimate_heading_level(line)
+
+        # 2. Fallback: Regex-based pattern detection on the text
+        # We check the content of the line to see if it looks like a chapter/section heading
+        text = getattr(line, "content", "") or str(line)
+        import re
+        heading_pattern = re.compile(r"^((Chapter|Section|Topic|Module|Part)\s+\d+|^\d+[\s.:])\s*", re.IGNORECASE)
+        subheading_pattern = re.compile(r"^\d+\.\d+\s+", re.IGNORECASE)
+
+        if heading_pattern.match(text.strip()):
+            return 1  # Treat as H1 (Chapter)
+        if subheading_pattern.match(text.strip()):
+            return 2  # Treat as H2 (Section/Topic)
+
         return 0
 
     def _estimate_heading_level(self, line) -> int:
@@ -501,8 +530,8 @@ class IngestionService:
         self, heading_path: list[str], level: int, text: str
     ) -> None:
         """Maintain hierarchical heading path."""
-        # Trim to current level
-        heading_path = heading_path[: level - 1]
+        # Trim to current level in-place
+        del heading_path[level - 1:]
         heading_path.append(text.strip())
 
     def _create_chunk(
@@ -510,12 +539,33 @@ class IngestionService:
         content_lines: list[str],
         metadata: ChunkMetadata,
         max_size: int,
-    ) -> tuple[str, ChunkMetadata]:
-        """Create a chunk from content lines, splitting if too large."""
-        content = "\n".join(content_lines).strip()
-        content_hash = hashlib.sha256(content.encode()).hexdigest()
+    ) -> list[tuple[str, ChunkMetadata]]:
+        """Create chunks from content lines, splitting if too large."""
+        full_content = "\n".join(content_lines).strip()
+        if not full_content:
+            return []
 
-        return content, metadata
+        if len(full_content) <= max_size:
+            return [(full_content, metadata)]
+
+        # Split into smaller chunks if it exceeds max_size
+        chunks = []
+        start = 0
+        while start < len(full_content):
+            end = start + max_size
+            chunk_text = full_content[start:end]
+
+            # Try to split at the last newline to avoid cutting words
+            if end < len(full_content):
+                last_newline = chunk_text.rfind("\n")
+                if last_newline != -1:
+                    end = start + last_newline
+                    chunk_text = full_content[start:end]
+
+            chunks.append((chunk_text.strip(), metadata))
+            start = end + 1 if end < len(full_content) else len(full_content)
+
+        return chunks
 
     async def embed_and_index(
         self, document_id: str, chunks: List[tuple[str, ChunkMetadata]]

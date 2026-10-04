@@ -89,15 +89,16 @@ def _get_ollama_embeddings() -> OllamaEmbeddings:
     """Ollama embeddings — local, no API key needed."""
     return OllamaEmbeddings(
         base_url=settings.ollama_base_url,
-        model="nomic-embed-text",  # Fast, high-quality local embeddings
+        model=settings.ollama_embedding_model,
     )
 
 
 def _get_openai_embeddings() -> OpenAIEmbeddings:
-    """Standard OpenAI embeddings."""
+    """Standard OpenAI embeddings (also works for Azure AI Foundry Project endpoints)."""
     return OpenAIEmbeddings(
         model=settings.openai_embedding_model,
-        api_key=settings.openai_api_key,
+        openai_api_key=settings.openai_api_key,
+        openai_api_base=settings.openai_base_url or None,
     )
 
 

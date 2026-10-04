@@ -12,11 +12,12 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status, Request, Depends
 from fastapi.responses import JSONResponse
 
 from app.schemas import JobCreate, JobResponse, JobStatusResponse, PDFGenerationResponse
 from app.schemas.specification import QuestionPaperValidationSummary
+from app.core.auth.jwt_handler import validate_token
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,9 @@ _jobs: dict[str, dict] = {}
     summary="Start question paper generation",
 )
 async def generate_question_paper(
-    request: JobCreate,
+    job_request: JobCreate,
     background_tasks: BackgroundTasks,
+    token_data: dict = Depends(validate_token),
 ) -> JobResponse:
     """Start a question paper generation job.
 
@@ -49,13 +51,13 @@ async def generate_question_paper(
         "status": "queued",
         "current_step": "queued",
         "progress_percentage": 0,
-        "specification": request.specification,
-        "source_document_id": request.source_document_id,
-        "additional_material_ids": request.additional_material_ids,
-        "tenant_id": request.tenant_id,
-        "page_start": request.page_start,
-        "page_end": request.page_end,
-        "ocr_dpi": request.ocr_dpi,
+        "specification": job_request.specification,
+        "source_document_id": job_request.source_document_id,
+        "additional_material_ids": job_request.additional_material_ids,
+        "tenant_id": job_request.tenant_id,
+        "page_start": job_request.page_start,
+        "page_end": job_request.page_end,
+        "ocr_dpi": job_request.ocr_dpi,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "validation_summary": None,
         "question_paper_url": None,
@@ -83,7 +85,10 @@ async def generate_question_paper(
     response_model=JobStatusResponse,
     summary="Get job status",
 )
-async def get_job_status(job_id: str) -> JobStatusResponse:
+async def get_job_status(
+    job_id: str,
+    token_data: dict = Depends(validate_token),
+) -> JobStatusResponse:
     """Get the current status of a generation job."""
     job = _jobs.get(job_id)
     if not job:
@@ -125,6 +130,7 @@ async def generate_question_paper_from_pdf(
     file: UploadFile = File(..., description="PDF file to extract content from"),
     specification: str = Form(..., description="JSON specification for question paper generation"),
     tenant_id: str = Form(..., description="Tenant/organization identifier"),
+    token_data: dict = Depends(validate_token),
 ) -> PDFGenerationResponse:
     """POC endpoint: upload a PDF and start question paper generation.
 
@@ -292,34 +298,22 @@ async def run_generation_pipeline_from_pdf(job_id: str, job_record: dict) -> Non
             question_paper_md = md_renderer.render_question_paper(compiled.question_paper)
             answer_key_md = md_renderer.render_answer_key(compiled.answer_key)
 
-            question_paper_md_path = data_dir / f"{job_id}_question_paper.md"
-            answer_key_md_path = data_dir / f"{job_id}_answer_key.md"
-            question_paper_md_path.write_text(question_paper_md, encoding="utf-8")
-            answer_key_md_path.write_text(answer_key_md, encoding="utf-8")
-
-            job_record["question_paper_md_url"] = str(question_paper_md_path)
-            job_record["answer_paper_md_url"] = str(answer_key_md_path)
+            # We no longer write these to local disk (data/)
+            job_record["question_paper_md_content"] = question_paper_md
+            job_record["answer_paper_md_content"] = answer_key_md
 
             # 2. Generate JSON (Structured Data)
-            question_paper_json_path = data_dir / f"{job_id}_question_paper.json"
-            answer_key_json_path = data_dir / f"{job_id}_answer_key.json"
-            question_paper_json_path.write_text(json.dumps(compiled.question_paper, indent=2), encoding="utf-8")
-            answer_key_json_path.write_text(json.dumps(compiled.answer_key, indent=2), encoding="utf-8")
-
-            job_record["question_paper_json_url"] = str(question_paper_json_path)
-            job_record["answer_key_json_url"] = str(answer_key_json_path)
+            # We no longer write these to local disk (data/)
+            job_record["question_paper_json_content"] = json.dumps(compiled.question_paper, indent=2)
+            job_record["answer_key_json_content"] = json.dumps(compiled.answer_key, indent=2)
 
             # 3. Generate PDF (Optional/Fallback)
             question_paper_pdf = await renderer.render_question_paper(compiled.question_paper)
             answer_key_pdf = await renderer.render_answer_key(compiled.answer_key)
 
-            question_paper_path = data_dir / f"{job_id}_question_paper.pdf"
-            answer_key_path = data_dir / f"{job_id}_answer_key.pdf"
-            question_paper_path.write_bytes(question_paper_pdf)
-            answer_key_path.write_bytes(answer_key_pdf)
-
-            job_record["question_paper_url"] = str(question_paper_path)
-            job_record["answer_paper_url"] = str(answer_key_path)
+            # We no longer write these to local disk (data/)
+            job_record["question_paper_pdf_bytes"] = question_paper_pdf
+            job_record["answer_paper_pdf_bytes"] = answer_key_pdf
         except Exception as render_error:
             logger.warning("Rendering failed for job %s: %s", job_id, render_error)
 
@@ -352,6 +346,7 @@ async def generate_question_paper_from_blob_url(
     blob_url: str = Form(..., description="Azure Blob Storage URL of the input PDF document"),
     specification: str = Form(..., description="JSON specification for question paper generation"),
     tenant_id: str = Form(..., description="Tenant/organization identifier"),
+    token_data: dict = Depends(validate_token),
 ) -> PDFGenerationResponse:
     """POC endpoint: accept an Azure Blob Storage URL and start question paper generation.
 
@@ -405,7 +400,7 @@ async def generate_question_paper_from_blob_url(
     # Queue the background task with the blob URL included
     background_tasks.add_task(run_generation_pipeline_from_blob, job_id, job_record)
 
-    logger.info("Created blob-URL generation job: %s (blob_url=%s)", job_id, blob_url)
+    logger.info("Created blob-URL generation job %s (blob_url=%s)", job_id, blob_url)
 
     return PDFGenerationResponse(
         job_id=job_id,
@@ -530,34 +525,22 @@ async def run_generation_pipeline_from_blob(job_id: str, job_record: dict) -> No
             question_paper_md = md_renderer.render_question_paper(compiled.question_paper)
             answer_key_md = md_renderer.render_answer_key(compiled.answer_key)
 
-            question_paper_md_path = data_dir / f"{job_id}_question_paper.md"
-            answer_key_md_path = data_dir / f"{job_id}_answer_key.md"
-            question_paper_md_path.write_text(question_paper_md, encoding="utf-8")
-            answer_key_md_path.write_text(answer_key_md, encoding="utf-8")
-
-            job_record["question_paper_md_url"] = str(question_paper_md_path)
-            job_record["answer_paper_md_url"] = str(answer_key_md_path)
+            # We no longer write these to local disk (data/)
+            job_record["question_paper_md_content"] = question_paper_md
+            job_record["answer_paper_md_content"] = answer_key_md
 
             # 2. Generate JSON (Structured Data)
-            question_paper_json_path = data_dir / f"{job_id}_question_paper.json"
-            answer_key_json_path = data_dir / f"{job_id}_answer_key.json"
-            question_paper_json_path.write_text(json.dumps(compiled.question_paper, indent=2), encoding="utf-8")
-            answer_key_json_path.write_text(json.dumps(compiled.answer_key, indent=2), encoding="utf-8")
-
-            job_record["question_paper_json_url"] = str(question_paper_json_path)
-            job_record["answer_key_json_url"] = str(answer_key_json_path)
+            # We no longer write these to local disk (data/)
+            job_record["question_paper_json_content"] = json.dumps(compiled.question_paper, indent=2)
+            job_record["answer_key_json_content"] = json.dumps(compiled.answer_key, indent=2)
 
             # 3. Generate PDF (Optional/Fallback)
             question_paper_pdf = await renderer.render_question_paper(compiled.question_paper)
             answer_key_pdf = await renderer.render_answer_key(compiled.answer_key)
 
-            question_paper_path = data_dir / f"{job_id}_question_paper.pdf"
-            answer_key_path = data_dir / f"{job_id}_answer_key.pdf"
-            question_paper_path.write_bytes(question_paper_pdf)
-            answer_key_path.write_bytes(answer_key_pdf)
-
-            job_record["question_paper_url"] = str(question_paper_path)
-            job_record["answer_paper_url"] = str(answer_key_path)
+            # We no longer write these to local disk (data/)
+            job_record["question_paper_pdf_bytes"] = question_paper_pdf
+            job_record["answer_paper_pdf_bytes"] = answer_key_pdf
         except Exception as render_error:
             logger.warning("Rendering failed for job %s: %s", job_id, render_error)
 
@@ -588,10 +571,13 @@ async def approve_question_paper(
     job_id: str,
     reviewer: str = "admin",
     comments: Optional[str] = None,
+    token_data: dict = Depends(validate_token),
 ) -> dict:
     """Human review approval endpoint.
 
     After generation, an admin can approve or request changes.
+    Upon approval, the generated PDF files are uploaded to Azure Blob Storage
+    and moved to the local 'output' directory.
     """
     job = _jobs.get(job_id)
     if not job:
@@ -606,6 +592,56 @@ async def approve_question_paper(
             detail=f"Job is not pending review (status: {job['status']})",
         )
 
+    # --- Output and Azure Upload Logic ---
+    from pathlib import Path
+    import shutil
+    from app.services.storage_service import StorageService
+
+    try:
+        # 2. Initialize Storage Service
+        storage = StorageService()
+        tenant_id = job.get("tenant_id", "default")
+        container_name = f"tenant-{tenant_id}-outputs"
+
+        # Files to process
+        files_to_process = {
+            "question_paper_pdf_bytes": "question_paper.pdf",
+            "answer_paper_pdf_bytes": "answer_paper.pdf"
+        }
+
+        blob_urls = {}
+        local_paths = {}
+
+        for key, filename in files_to_process.items():
+            file_data = job.get(key)
+            if file_data:
+                # B. Azure Upload
+                blob_name = f"{job_id}/{filename}"
+                try:
+                    # Upload to Azure
+                    await storage.upload_document(
+                        container_name=container_name,
+                        blob_name=blob_name,
+                        data=file_data
+                    )
+                    # Generate a secure SAS URL
+                    url = await storage.get_blob_url(container_name, blob_name)
+                    blob_urls[key] = url
+                    logger.info("Successfully uploaded %s to Azure: %s", filename, url)
+                except Exception as upload_err:
+                    logger.error("Failed to upload %s to Azure: %s", filename, upload_err, exc_info=True)
+            else:
+                logger.warning("No file data found in job record for key: %s", key)
+
+        await storage.close()
+        job["output_files"] = local_paths
+        job["blob_urls"] = blob_urls
+
+    except Exception as e:
+        logger.error("Failed to process output files or upload to Azure: %s", e)
+        blob_urls = {}
+        local_paths = {}
+
     job["status"] = "completed"
     job["reviewed_by"] = reviewer
     job["reviewed_at"] = datetime.now(timezone.utc).isoformat()
@@ -613,7 +649,12 @@ async def approve_question_paper(
 
     logger.info("Job %s approved by %s", job_id, reviewer)
 
-    return {"message": "Question paper approved", "job_id": job_id}
+    return {
+        "message": "Question paper approved, files moved to output and uploaded to Azure",
+        "job_id": job_id,
+        "blob_urls": blob_urls,
+        "local_paths": local_paths
+    }
 
 
 async def run_generation_pipeline(job_id: str, job_record: dict) -> None:
@@ -696,9 +737,6 @@ async def run_generation_pipeline(job_id: str, job_record: dict) -> None:
         job_record["validation_summary"] = json.dumps(result.validation_summary)
 
         # Step 4: Render PDFs & Markdown
-        from pathlib import Path
-        data_dir = Path("data")
-        data_dir.mkdir(parents=True, exist_ok=True)
         from app.services.markdown_rendering_service import MarkdownRenderingService
         md_renderer = MarkdownRenderingService()
         renderer = PDFRenderingService()
@@ -707,24 +745,17 @@ async def run_generation_pipeline(job_id: str, job_record: dict) -> None:
             question_paper_md = md_renderer.render_question_paper(compiled.question_paper)
             answer_key_md = md_renderer.render_answer_key(compiled.answer_key)
 
-            question_paper_md_path = data_dir / f"{job_id}_question_paper.md"
-            answer_key_md_path = data_dir / f"{job_id}_answer_key.md"
-            question_paper_md_path.write_text(question_paper_md, encoding="utf-8")
-            answer_key_md_path.write_text(answer_key_md, encoding="utf-8")
-
-            job_record["question_paper_md_url"] = str(question_paper_md_path)
-            job_record["answer_paper_md_url"] = str(answer_key_md_path)
+            # Store content in memory instead of writing to local disk (data/)
+            job_record["question_paper_md_content"] = question_paper_md
+            job_record["answer_paper_md_content"] = answer_key_md
 
             # 2. Generate PDF (Optional/Fallback)
             question_paper_pdf = await renderer.render_question_paper(compiled.question_paper)
             answer_key_pdf = await renderer.render_answer_key(compiled.answer_key)
-            question_paper_path = data_dir / f"{job_id}_question_paper.pdf"
-            answer_key_path = data_dir / f"{job_id}_answer_key.pdf"
-            question_paper_path.write_bytes(question_paper_pdf)
-            answer_key_path.write_bytes(answer_key_pdf)
 
-            job_record["question_paper_url"] = str(question_paper_path)
-            job_record["answer_paper_url"] = str(answer_key_path)
+            # Store bytes in memory instead of writing to local disk (data/)
+            job_record["question_paper_pdf_bytes"] = question_paper_pdf
+            job_record["answer_paper_pdf_bytes"] = answer_key_pdf
         except Exception as render_error:
             logger.warning("Rendering failed for job %s: %s", job_id, render_error)
 

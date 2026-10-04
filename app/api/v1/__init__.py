@@ -8,8 +8,10 @@ from . import question_papers
 from . import documents
 from . import books
 from . import catalog
+from . import auth
 
 api_router.include_router(question_papers.router)
 api_router.include_router(documents.router)
 api_router.include_router(books.router)
 api_router.include_router(catalog.router)
+api_router.include_router(auth.router)

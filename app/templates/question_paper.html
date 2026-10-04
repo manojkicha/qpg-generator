@@ -139,6 +139,32 @@
             font-weight: bold;
             white-space: nowrap;
         }
+        /* Match the Following Layout */
+        .match-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .match-table td {
+            width: 45%;
+            padding: 5px;
+            vertical-align: top;
+            border-bottom: 1px dotted #ccc;
+        }
+        .match-column-header {
+            font-weight: bold;
+            text-align: center;
+            text-decoration: underline;
+        }
+        /* Image Rendering */
+        .question-image {
+            display: block;
+            max-width: 300px;
+            max-height: 200px;
+            margin: 10px 0;
+            border: 1px solid #000;
+        }
         /* Footer */
         .end-marker {
             text-align: center;
@@ -213,12 +239,30 @@
         <div class="question-row">
             <div class="question-content">
                 <strong>Q{{ loop.index }}.</strong> {{ question.question_text }}
-                {% if question.options %}
+
+                {% if question.question_type == 'match_the_following' and question.options %}
+                <table class="match-table">
+                    <tr>
+                        <td class="match-column-header">Column A</td>
+                        <td class="match-column-header">Column B</td>
+                    </tr>
+                    {% for pair in question.options %}
+                    <tr>
+                        <td>{{ pair.left }}</td>
+                        <td>{{ pair.right }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% elif question.options %}
                 <div style="margin-left: 20px; margin-top: 10px;">
                     {% for option in question.options %}
                     <div style="margin-bottom: 5px;">{{ option }}</div>
                     {% endfor %}
                 </div>
+                {% endif %}
+
+                {% if question.image_url %}
+                <img src="{{ question.image_url }}" class="question-image">
                 {% endif %}
             </div>
             <div class="question-marks">[{{ question.marks }}]</div>

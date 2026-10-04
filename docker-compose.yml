@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/home/appuser/app/data
+      - ./output:/home/appuser/app/output
+    restart: always
+
+networks:
+  default:
+    driver: bridge

@@ -90,59 +90,168 @@ Return ONLY the JSON object."""
         """Execute the planning step based on the structured input JSON.
 
         Args:
-            state: Contains 'specification' which now follows the ExamSpecification format.
+            state: Contains 'specification' which follows the New Specification format.
 
         Returns:
             Updated state with 'generation_plan' containing sections and tasks.
         """
-        spec = state.get("specification", {})
+        spec_obj = state.get("specification")
+
+        # Convert Pydantic model to dict if necessary
+        if hasattr(spec_obj, "model_dump"):
+            spec = spec_obj.model_dump()
+        elif isinstance(spec_obj, dict):
+            spec = spec_obj
+        else:
+            spec = {}
 
         # Handle the new structured JSON format
-        if "exam" in spec and "sections" in spec:
-            logger.info("Using structured ExamSpecification for planning: %s", spec["exam"].get("title"))
+        if "sections" in spec and "paper_metadata" in spec:
+            logger.info("Using structured Specification for planning: %s", spec["paper_metadata"].get("title"))
 
             sections = []
             all_tasks = []
 
+            metadata = spec.get("paper_metadata", {})
+            constraints = spec.get("constraints", {})
+            difficulty = metadata.get("paper_difficulty_level", "medium")
+
             # Map user-defined question types to agent-internal types
             type_mapping = {
-                "mcq": "multiple_choice",
-                "fill_blank": "fill_in_the_blank",
-                "match": "match_the_following",
-                "one_word": "one_word_answer",
+                "multiple_choice": "multiple_choice",
+                "fill_in_the_blanks": "fill_in_the_blank",
+                "match_the_following": "match_the_following",
+                "picture_based": "picture_based_mcq",
+                "very_short_answer": "one_word_answer",
                 "short_answer": "short_answer",
-                "activity": "picture_based_mcq" # Mapping activity to a complex type
+                "long_answer": "long_answer",
             }
 
+            # 1. Validation & Marks Balancing
+            target_total = metadata.get("total_marks", 0)
+            current_total = 0
+
+            # First pass: Calculate intended total and identify discrepancies
+            planned_sections = []
             for i, s in enumerate(spec["sections"]):
-                section_name = s.get("name", f"Section {i+1}")
+                section_name = s.get("section_title", f"Section {i+1}")
                 q_type = s.get("question_type", "short_answer")
                 internal_type = type_mapping.get(q_type, q_type)
-                count = s.get("question_count", 1)
-                marks = s.get("marks_each", 1)
+                count = s.get("total_questions_to_generate", 1)
+                marks = s.get("marks_per_question", 1)
+                instructions = s.get("instructions", "")
 
-                # Calculate marks summary (e.g., "5 x 1 = 5 Marks")
+                section_marks = count * marks
+                current_total += section_marks
+
+                planned_sections.append({
+                    "original_section": s,
+                    "section_name": section_name,
+                    "internal_type": internal_type,
+                    "count": count,
+                    "marks": marks,
+                    "instructions": instructions,
+                    "section_marks": section_marks
+                })
+
+            # Balancing Logic: If total marks don't match target, adjust proportionally
+            if target_total > 0 and current_total != target_total:
+                diff = target_total - current_total
+                logger.info("Marks mismatch: Target=%d, Planned=%d. Adjusting sections by %d", target_total, current_total, diff)
+
+                # Distribute the difference across sections to maintain proportionality
+                # We iterate and adjust the count of questions in sections until diff is 0
+                section_idx = 0
+                while diff != 0 and section_idx < len(planned_sections):
+                    ps = planned_sections[section_idx]
+                    m = ps["marks"]
+                    if m > 0:
+                        # How many questions can we add/remove from this section?
+                        # If diff is positive, we add. If negative, we remove.
+                        change = diff // m
+                        if change == 0 and diff != 0:
+                            # Can't add a full question, just adjust marks of one question if needed
+                            # But better to try other sections first
+                            section_idx += 1
+                            continue
+
+                        # Limit change to avoid creating negative question counts
+                        if change < 0:
+                            change = max(change, -ps["count"])
+
+                        ps["count"] += change
+                        ps["section_marks"] = ps["count"] * ps["marks"]
+                        diff -= change * m
+
+                    section_idx += 1
+
+                # If there's still a remaining difference (due to integer division),
+                # adjust the marks of the very last question in the last section
+                if diff != 0:
+                    last_section = planned_sections[-1]
+                    # We add the remaining diff to the total of the last section
+                    # This might result in one question having non-standard marks
+                    last_section["section_marks"] += diff
+                    logger.info("Final remainder adjustment: %d marks added to last section", diff)
+
+            # 2. Final Task Generation
+            for ps in planned_sections:
+                count = ps["count"]
+                marks = ps["marks"]
                 summary = f"{count} x {marks} = {count * marks} Marks"
 
                 tasks = []
-                for j in range(count):
-                    task_id = f"q{len(all_tasks)+1}"
-                    tasks.append({
-                        "id": task_id,
-                        "question_type": internal_type,
-                        "topic": spec.get("subject", spec["exam"].get("title", "General")),
-                        "difficulty_level": spec.get("difficulty_level", "medium"),
-                        "marks": marks,
-                        "estimated_time_minutes": 2,
-                        "prompt_template": f"Generate a {internal_type} question about {spec.get('subject', 'the subject')}",
-                        "section_title": section_name,
-                        "marks_summary": summary
-                    })
+                topic_dist = ps["original_section"].get("topic_distribution", [])
+
+                if topic_dist:
+                    # Redistribute counts proportionally if the section count was adjusted
+                    total_dist_count = sum(d.get("question_count", 0) for d in topic_dist)
+                    adjustment_factor = count / total_dist_count if total_dist_count > 0 else 1
+
+                    for dist in topic_dist:
+                        chapter_id = dist.get("chapter_id")
+                        chapter_name = dist.get("chapter_name", "General")
+                        # Scale question count based on adjusted section total
+                        q_count = max(1, round(dist.get("question_count", 0) * adjustment_factor))
+
+                        for _ in range(q_count):
+                            task_id = f"q{len(all_tasks)+1}"
+                            tasks.append({
+                                "id": task_id,
+                                "question_type": ps["internal_type"],
+                                "topic": chapter_name,
+                                "chapter_id": chapter_id,
+                                "difficulty_level": difficulty,
+                                "marks": marks,
+                                "estimated_time_minutes": 2,
+                                "prompt_template": f"Generate a {ps['internal_type']} question from {chapter_name} ({chapter_id})",
+                                "section_title": ps["section_name"],
+                                "marks_summary": summary,
+                                "instructions": ps["instructions"]
+                            })
+                else:
+                    subject = metadata.get("title", "the subject")
+                    for _ in range(count):
+                        task_id = f"q{len(all_tasks)+1}"
+                        tasks.append({
+                            "id": task_id,
+                            "question_type": ps["internal_type"],
+                            "topic": subject,
+                            "difficulty_level": difficulty,
+                            "marks": marks,
+                            "estimated_time_minutes": 2,
+                            "prompt_template": f"Generate a {ps['internal_type']} question about {subject}",
+                            "section_title": ps["section_name"],
+                            "marks_summary": summary,
+                            "instructions": ps["instructions"]
+                        })
 
                 all_tasks.extend(tasks)
                 sections.append({
-                    "section_title": section_name,
+                    "section_id": ps["original_section"].get("section_id"),
+                    "section_title": ps["section_name"],
                     "marks_summary": summary,
+                    "instructions": ps["instructions"],
                     "tasks": tasks
                 })
 
@@ -192,7 +301,7 @@ Return ONLY the JSON object."""
             tasks.append({
                 "id": f"q{i}",
                 "question_type": q.get("question_type", "short_answer"),
-                "topic": q.get("topic", specification.get("subject", "General")),
+                "topic": specification.get("subject", "General"),
                 "difficulty_level": q.get("difficulty_level", "medium"),
                 "marks": q.get("marks", 1),
                 "estimated_time_minutes": q.get("estimated_time_minutes", 1),

@@ -44,53 +44,71 @@ class CompilationService:
         """
         logger.info("Compiling %d questions for job %s", len(questions), job_id)
 
-        # Group questions by section
-        sections = {}
-        for q in questions:
-            s_title = q.get("section_title", "General Section")
-            s_summary = q.get("marks_summary", "")
-            if s_title not in sections:
-                sections[s_title] = {
-                    "section_title": s_title,
-                    "marks_summary": s_summary,
-                    "questions": []
-                }
-            sections[s_title]["questions"].append(q)
+        # Ensure specification is a dict
+        if hasattr(specification, "model_dump"):
+            spec_dict = specification.model_dump()
+        elif isinstance(specification, dict):
+            spec_dict = specification
+        else:
+            spec_dict = {}
 
-        # Convert sections dict to a sorted list based on original question order
-        # We can't easily sort since it's a dict, but let's maintain original order
+        # Extract Metadata
+        meta = spec_dict.get("paper_metadata", {})
+
+        # Group questions by section based on the specification order
+        spec_sections = spec_dict.get("sections", [])
         ordered_sections = []
-        seen_sections = set()
-        for q in questions:
-            s_title = q.get("section_title", "General Section")
-            if s_title not in seen_sections:
-                ordered_sections.append(sections[s_title])
-                seen_sections.add(s_title)
+
+        for s_spec in spec_sections:
+            s_title = s_spec.get("section_title", "General Section")
+            s_id = s_spec.get("section_id")
+            instructions = s_spec.get("instructions", "")
+
+            # Filter questions that belong to this section
+            section_questions = [q for q in questions if q.get("section_title") == s_title]
+
+            if section_questions:
+                # Calculate marks summary for the actual generated questions
+                # (Usually count x marks, but let's be dynamic)
+                count = len(section_questions)
+                marks_per = section_questions[0].get("marks", 0)
+                summary = f"{count} x {marks_per} = {count * marks_per} Marks"
+
+                ordered_sections.append({
+                    "section_id": s_id,
+                    "section_title": s_title,
+                    "instructions": instructions,
+                    "marks_summary": summary,
+                    "questions": section_questions
+                })
 
         # Build question paper
         question_paper = {
             "job_id": job_id,
             "tenant_id": tenant_id,
-            "title": specification.get("title", "Generated Question Paper"),
-            "subject": specification.get("subject", "General"),
-            "academic_year": specification.get("academic_year", "2026"),
-            "duration_minutes": specification.get("duration_minutes", 180),
-            "total_marks": specification.get("total_marks", 100),
+            "title": meta.get("title", "Generated Question Paper"),
+            "grade_level": meta.get("grade_level", "General"),
+            "total_marks": meta.get("total_marks", 100),
+            "paper_difficulty_level": meta.get("paper_difficulty_level", "medium"),
             "total_questions": len(questions),
-            "logo_url": specification.get("logo_url", "file:///Users/kmanojkumar/Downloads/epublication_github/code/qpg-generator/input/logo.png"),
-            "general_instructions": specification.get("general_instructions", [
+            "logo_url": spec_dict.get("logo_url", "static/images/default_logo.png"),
+            "general_instructions": spec_dict.get("general_instructions", [
                 "Read all questions carefully before answering.",
                 "All questions are compulsory.",
                 "Ensure your handwriting is neat and legible."
             ]),
-            "logo_url": specification.get("logo_url", "static/images/default_logo.png"),
             "version": 1,
-            "specification_hash": self._hash_specification(specification),
+            "specification_hash": self._hash_specification(spec_dict),
             "questions": self._format_questions_for_paper(questions),
             "sections": ordered_sections,
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "metadata": specification.get("metadata", {}),
+            "metadata": spec_dict.get("metadata", {}),
         }
+
+        # DEBUG: Print final JSON payload for PDF generation
+        # print("\n" + "="*50 + "\nFINAL PDF JSON PAYLOAD\n" + "="*50)
+        # print(json.dumps(question_paper, indent=2))
+        # print("="*50 + "\n")
 
         # Build answer key
         answer_key = {
@@ -98,11 +116,11 @@ class CompilationService:
             "question_paper_id": f"qp_{job_id}",
             "tenant_id": tenant_id,
             "total_questions": len(questions),
-            "total_marks": specification.get("total_marks", 100),
-            "negative_marking_enabled": specification.get(
+            "total_marks": meta.get("total_marks", 100),
+            "negative_marking_enabled": spec_dict.get(
                 "mark_distribution", {}
             ).get("negative_marking_enabled", False),
-            "negative_marks_per_wrong": specification.get(
+            "negative_marks_per_wrong": spec_dict.get(
                 "mark_distribution", {}
             ).get("negative_mark_weight", 0.25),
             "answers": self._format_answers_for_key(questions),
@@ -131,6 +149,7 @@ class CompilationService:
                     "question_text": q.get("question_text", ""),
                     "options": q.get("options", []),
                     "topic": q.get("topic", ""),
+                    "chapter_id": q.get("chapter_id"),
                     "question_type": q.get("question_type", "short_answer"),
                     "marks": q.get("marks", 10),
                     "difficulty_level": q.get("difficulty_level", "medium"),

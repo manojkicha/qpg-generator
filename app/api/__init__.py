@@ -1,6 +1,7 @@
 """API package."""
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 def create_app() -> FastAPI:
@@ -24,6 +25,15 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,
+    )
+
+    # Add CORS middleware to allow the frontend to communicate with the backend
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # In production, replace with ["http://localhost:8443"]
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # Add API router
