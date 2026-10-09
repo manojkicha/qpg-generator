@@ -3,7 +3,7 @@ generate a question paper from a JSON specification.
 
 Exercises the same services the FastAPI job pipeline uses
 (app/api/v1/question_papers.py:run_generation_pipeline), so it's a good way
-to sanity-check your VECTOR_STORE_PROVIDER setup (local / qdrant /
+to sanity-check your VECTOR_STORE_PROVIDER setup (local / postgres /
 azure_ai_search) end-to-end without needing to run the API server and poll
 job status.
 
@@ -11,8 +11,8 @@ Prerequisites:
   - .env configured (see .env.example) — in particular VECTOR_STORE_PROVIDER,
     and LLM_PROVIDER / EMBEDDING_PROVIDER pointing at a running model
     (e.g. Ollama with `ollama pull llama3:8b` and `ollama pull nomic-embed-text`).
-  - If VECTOR_STORE_PROVIDER=qdrant: Qdrant running (e.g.
-    `docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant`).
+  - If VECTOR_STORE_PROVIDER=postgres: PostgreSQL with pgvector extension
+    running (e.g. `docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=postgres pgvector/pgvector:pg16`).
 
 Usage:
     python scripts/demo_ingest_and_generate.py

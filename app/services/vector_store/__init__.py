@@ -1,4 +1,4 @@
-"""Vector store abstraction — swap Qdrant / Azure AI Search / Chroma / in-memory via config.
+"""Vector store abstraction — swap PostgreSQL / Azure AI Search / Chroma / in-memory via config.
 
 Usage:
     from app.services.vector_store import get_vector_store, VectorRecord, ChromaStore

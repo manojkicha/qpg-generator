@@ -3,7 +3,7 @@
 Based on SDD Section 5.2.1:
 - Document Intelligence extracts text, headings, tables, images with layout metadata
 - Chunking service splits by structural boundaries (chapter/section/heading)
-- Embeddings written to the configured vector store (Azure AI Search, Qdrant, or
+- Embeddings written to the configured vector store (Azure AI Search, PostgreSQL/pgvector, or
   in-memory for local dev) with metadata fields for filtered retrieval — see
   app/services/vector_store/ and the VECTOR_STORE_PROVIDER setting.
 """
@@ -83,7 +83,7 @@ class IngestionService:
         return self._doc_intel_client
 
     def get_vector_store(self) -> VectorStoreClient:
-        """Return the configured vector store (local / Azure AI Search / Qdrant).
+        """Return the configured vector store (local / Azure AI Search / PostgreSQL).
 
         Selection is driven entirely by `VECTOR_STORE_PROVIDER` in settings —
         see app/services/vector_store/factory.py.
@@ -572,7 +572,7 @@ class IngestionService:
     ) -> List[str]:
         """Embed chunks and write them to the configured vector store.
 
-        The backend (in-memory, Azure AI Search, or Qdrant) is selected by
+        The backend (in-memory, Azure AI Search, or PostgreSQL/pgvector) is selected by
         `VECTOR_STORE_PROVIDER` — this method itself is backend-agnostic.
         """
         logger.info("Embedding %d chunks for document %s", len(chunks), document_id)

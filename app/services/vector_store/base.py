@@ -2,11 +2,12 @@
 
 This is what lets the rest of the app (ingestion + retrieval) stay ignorant of
 *which* vector database is actually storing the embeddings. Today there are
-three backends (see `factory.py`):
+four backends (see `factory.py`):
 
   - LocalVectorStore    — in-memory cosine similarity, zero setup
   - AzureAISearchStore  — Azure AI Search
-  - QdrantStore         — Qdrant (self-hosted via Docker, or Qdrant Cloud)
+  - PostgresStore       — PostgreSQL with pgvector extension
+  - ChromaStore         — Chroma DB (lightweight embedded vector store)
 
 Adding a new backend means implementing `VectorStoreClient` and wiring it up
 in `factory.py` — nothing in `ingestion_service.py` or `search_service.py`

@@ -2,7 +2,7 @@
 
 Used by the LangGraph Retriever Agent for content-aware question generation.
 
-The actual retrieval backend (in-memory, Azure AI Search, or Qdrant) is
+The actual retrieval backend (in-memory, Azure AI Search, or PostgreSQL/pgvector) is
 selected by `VECTOR_STORE_PROVIDER` — see app/services/vector_store/. This
 service doesn't know or care which one is active.
 """
@@ -48,7 +48,7 @@ class SearchService:
         """Perform hybrid search over the eBook content for one document.
 
         Delegates to whichever vector store is configured
-        (VECTOR_STORE_PROVIDER: "local" | "azure_ai_search" | "qdrant").
+        (VECTOR_STORE_PROVIDER: "local" | "azure_ai_search" | "postgres").
         """
         logger.info("Search for query: %s (doc=%s)", query[:50], document_id)
 

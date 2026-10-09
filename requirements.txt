@@ -11,7 +11,7 @@ PyJWT
 # Database
 sqlalchemy[asyncio]
 aiosqlite
-# psycopg[binary]        # uncomment for PostgreSQL in production
+psycopg[binary]
 
 # LLM orchestration
 langgraph
@@ -20,7 +20,8 @@ langchain-ollama
 langchain-openai
 
 # Vector stores (only install what VECTOR_STORE_PROVIDER actually uses)
-qdrant-client
+asyncpg
+pgvector
 azure-search-documents
 chromadb
 

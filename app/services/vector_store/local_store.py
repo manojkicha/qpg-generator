@@ -2,7 +2,7 @@
 
 Fine for local dev (e.g. Ollama-only setups with no Docker/cloud vector DB
 running), but it's per-process and non-persistent, so it's not meant for
-production use. Switch `VECTOR_STORE_PROVIDER` to "qdrant" or
+production use. Switch `VECTOR_STORE_PROVIDER` to "postgres" or
 "azure_ai_search" for anything real.
 """
 

@@ -10,7 +10,7 @@ Module 1 automates the creation of question papers from eBook PDFs. It implement
 
 Based on SDD Section 5, the system has these layers:
 
-- **Ingestion & Indexing Pipeline** — Document Intelligence extracts text, headings, tables, and images with layout metadata. Content is chunked by structural boundaries (chapter/section/heading) and embedded into a configurable vector store (Qdrant, Azure AI Search, or in-memory for local dev — see [Vector Store Configuration](#vector-store-configuration)).
+- **Ingestion & Indexing Pipeline** — Document Intelligence extracts text, headings, tables, and images with layout metadata. Content is chunked by structural boundaries (chapter/section/heading) and embedded into a configurable vector store (PostgreSQL with pgvector, Azure AI Search, or in-memory for local dev — see [Vector Store Configuration](#vector-store-configuration)).
 - **Agentic Generation Pipeline (LangGraph)** — Explicit graph of agent nodes:
   - **Planner** — Decomposes the specification into question generation tasks
   - **Retriever** — Performs hybrid search over the indexed eBook content
@@ -152,20 +152,25 @@ Same applies to `EMBEDDING_PROVIDER` — set to `ollama` (default) or `openai`.
 
 ## Vector Store Configuration
 
-Switch between an in-memory store (zero setup), a local/self-hosted Qdrant instance, or Azure AI Search by setting `VECTOR_STORE_PROVIDER` in `.env`. Nothing else in the code needs to change — `IngestionService` and `SearchService` both read this one setting via `app/services/vector_store/`.
+Switch between an in-memory store (zero setup), PostgreSQL with pgvector, or Azure AI Search by setting `VECTOR_STORE_PROVIDER` in `.env`. Nothing else in the code needs to change — `IngestionService` and `SearchService` both read this one setting via `app/services/vector_store/`.
 
 ```bash
 # In-memory (default) — no external DB, chunks live only for the process lifetime.
 # Good for quick local testing with Ollama embeddings.
 VECTOR_STORE_PROVIDER=local
 
-# Qdrant — e.g. a local Docker container:
-#   docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
-# Dashboard: http://localhost:6333/dashboard
-VECTOR_STORE_PROVIDER=qdrant
-QDRANT_URL=http://localhost:6333
-QDRANT_COLLECTION=question-paper-chunks
-QDRANT_API_KEY=              # leave blank for a local instance; set for Qdrant Cloud
+# PostgreSQL with pgvector
+# Requires PostgreSQL with the pgvector extension installed.
+# For local PostgreSQL:
+VECTOR_STORE_PROVIDER=postgres
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=edusol_qpg
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=yourpassword
+POSTGRES_SSL_MODE=disable
+# Or use a single DATABASE_URL instead of individual settings:
+# DATABASE_URL=postgresql+asyncpg://postgres:yourpassword@localhost:5432/edusol_qpg
 
 # Azure AI Search
 VECTOR_STORE_PROVIDER=azure_ai_search
@@ -174,7 +179,7 @@ AZURE_SEARCH_KEY=...
 AZURE_SEARCH_INDEX=question-paper-chunks
 ```
 
-The Qdrant collection is created automatically on first write, sized to match whichever embedding model (Ollama, OpenAI, or Azure OpenAI) is configured — no manual index/schema setup needed.
+The PostgreSQL table `question_paper_chunks` is created automatically on first write with the pgvector extension. The embedding dimension is sized to match whichever embedding model (Ollama, OpenAI, or Azure OpenAI) is configured — no manual index/schema setup needed.
 
 > **Backward compatibility:** if `VECTOR_STORE_PROVIDER` is left unset (`local`) but `AZURE_SEARCH_ENDPOINT` and `AZURE_SEARCH_KEY` are both set, Azure AI Search is used automatically. Set `VECTOR_STORE_PROVIDER=azure_ai_search` explicitly to make that intent clear.
 
@@ -202,7 +207,7 @@ This writes `question_paper.json`, `answer_key.json`, `question_paper.pdf`, and 
 Based on SDD Section 3:
 
 - **AI & Data**: Azure OpenAI (GPT-4o, embeddings), Azure Document Intelligence, LangGraph
-- **Vector Store**: Qdrant (self-hosted or cloud), Azure AI Search, or in-memory — configurable via `VECTOR_STORE_PROVIDER`
+- **Vector Store**: PostgreSQL with pgvector, Azure AI Search, or in-memory — configurable via `VECTOR_STORE_PROVIDER`
 - **Backend**: Python 3.11+, FastAPI, Pydantic, SQLAlchemy (async)
 - **Storage**: Azure Blob Storage, PostgreSQL, Redis
 - **PDF**: WeasyPrint (HTML-to-PDF), Jinja2 templates

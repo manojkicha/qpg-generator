@@ -1,7 +1,7 @@
 """Chroma vector store backend.
 
 A lightweight, embeddings-first vector store that runs locally or can be
-deployed without a separate service (no Docker needed, unlike Qdrant).
+deployed without a separate service (no Docker needed, unlike PostgreSQL).
 
 Requires `pip install chromadb`.
 """

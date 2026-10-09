@@ -19,7 +19,8 @@ def get_vector_store() -> VectorStoreClient:
     """Return the vector store configured via VECTOR_STORE_PROVIDER.
 
     Values:
-      - "qdrant"          → Qdrant (QDRANT_URL, QDRANT_COLLECTION, QDRANT_API_KEY)
+      - "postgres"        → PostgreSQL with pgvector extension
+                            (DATABASE_URL or POSTGRES_HOST/DB/USER/PASSWORD)
       - "azure_ai_search" → Azure AI Search (AZURE_SEARCH_ENDPOINT/KEY/INDEX)
       - "chroma"          → Chroma DB (lightweight embedded vector store)
       - "local" (default) → in-memory cosine similarity search, no external DB
@@ -30,11 +31,11 @@ def get_vector_store() -> VectorStoreClient:
     """
     provider = (settings.vector_store_provider or "local").strip().lower()
 
-    if provider == "qdrant":
-        from .qdrant_store import QdrantStore
+    if provider == "postgres":
+        from .postgres_store import PostgresStore
 
-        logger.info("Vector store: Qdrant (%s)", settings.qdrant_url)
-        return QdrantStore()
+        logger.info("Vector store: PostgreSQL with pgvector")
+        return PostgresStore()
 
     if provider in ("azure_ai_search", "azure_search", "azure"):
         from .azure_search_store import AzureAISearchStore

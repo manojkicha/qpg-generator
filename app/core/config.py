@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     azure_doc_intel_key: str = ""
 
     # ─── Vector Store Provider Selection ───────────────────────────────────────
-    # Set to "local" (default — in-memory, no setup), "qdrant", or "azure_ai_search".
+    # Set to "local" (default — in-memory, no setup), "postgres", or "azure_ai_search".
     # See app/services/vector_store/ — this is the only switch needed to move
     # between backends; no code changes required.
     vector_store_provider: str = "local"
@@ -52,13 +52,16 @@ class Settings(BaseSettings):
     azure_search_key: str = ""
     azure_search_index: str = "question-paper-chunks"
 
-    # ─── Qdrant ────────────────────────────────────────────────────────────────
-    # Default matches the standard local Docker setup (dashboard at
-    # http://localhost:6333/dashboard). Leave qdrant_api_key empty for a local
-    # instance; set it when pointing at Qdrant Cloud or an auth-enabled instance.
-    qdrant_url: str = "http://localhost:6333"
-    qdrant_api_key: str = ""
-    qdrant_collection: str = "question-paper-chunks"
+    # ─── PostgreSQL with pgvector ──────────────────────────────────────────────
+    # Primary connection string (e.g. postgresql+asyncpg://user:password@host:5432/dbname).
+    # If DATABASE_URL is set to a PostgreSQL URL, it is used directly.
+    # Otherwise, individual settings below are assembled into a connection URL.
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_db: str = "edusol_qpg"
+    postgres_user: str = "postgres"
+    postgres_password: str = ""
+    postgres_ssl_mode: str = "prefer"
 
     # ─── Chroma DB ─────────────────────────────────────────────────────────────
     # Local embedded vector store — no separate service needed.

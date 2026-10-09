@@ -34,7 +34,8 @@ FROM python:3.11-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/home/appuser/.local/bin:${PATH}"
+    PATH="/home/appuser/.local/bin:${PATH}" \
+    PYTHONPATH="/home/appuser/app"
 
 # Install runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -63,4 +64,4 @@ COPY --chown=appuser:appuser . .
 EXPOSE 8000
 
 # Command to run the application
-CMD ["python", "app/main.py"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
