@@ -48,6 +48,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote as urlquote
 
 import asyncpg
+from asyncpg import FeatureNotSupportedError
 from pgvector.asyncpg import register_vector
 
 from app.core.config import settings
@@ -117,11 +118,22 @@ class PostgresStore(VectorStoreClient):
                 # Bootstrap: the extension must exist BEFORE register_vector()
                 # runs on pooled connections, otherwise asyncpg raises
                 # "unknown type: public.vector".
-                boot = await asyncpg.connect(conn_url)
                 try:
-                    await boot.execute("CREATE EXTENSION IF NOT EXISTS vector")
-                finally:
-                    await boot.close()
+                    boot = await asyncpg.connect(conn_url)
+                    try:
+                        await boot.execute("CREATE EXTENSION IF NOT EXISTS vector")
+                    finally:
+                        await boot.close()
+                except FeatureNotSupportedError as e:
+                    if "extension \"vector\" is not allow-listed" in str(e):
+                        raise RuntimeError(
+                            "Azure PostgreSQL requires the 'vector' extension to be allow-listed. "
+                            "Go to Azure Portal → PostgreSQL Flexible Server → Server parameters → "
+                            "azure.extensions → add 'vector' to the allow-list and restart the server."
+                        ) from e
+                    raise
+                except Exception as e:
+                    raise
 
                 self._pool = await asyncpg.create_pool(
                     conn_url,
