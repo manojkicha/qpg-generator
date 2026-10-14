@@ -26,18 +26,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install python dependencies
 COPY requirements.txt .
-RUN pip config set global.index-url https://pypi.python.org/simple && \
-    pip install --upgrade pip --default-timeout=1000 && \
-    pip install --no-cache-dir --default-timeout=1000 -r requirements.txt
-
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Final stage
 FROM python:3.11-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/home/appuser/.local/bin:${PATH}" \
-    PYTHONPATH="/home/appuser/app"
+    PATH="/home/appuser/.local/bin:${PATH}"
 
 # Install runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -66,4 +63,4 @@ COPY --chown=appuser:appuser . .
 EXPOSE 8000
 
 # Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
