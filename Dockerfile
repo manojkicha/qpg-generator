@@ -26,8 +26,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install python dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip config set global.index-url https://pypi.python.org/simple && \
+    pip install --upgrade pip --default-timeout=1000 && \
+    pip install --no-cache-dir --default-timeout=1000 -r requirements.txt
+
 
 # Final stage
 FROM python:3.11-slim-bookworm
