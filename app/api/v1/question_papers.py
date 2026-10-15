@@ -200,7 +200,7 @@ async def run_generation_pipeline_from_pdf(job_id: str, job_record: dict) -> Non
 
     from app.services import IngestionService, GenerationService
     from app.services.compilation_service import CompilationService
-    from app.services.pdf_rendering_service import PDFRenderingService
+    from app.services.reportlab_rendering_service import ReportLabRenderingService
 
     # Persist the uploaded PDF so the ingestion pipeline can read it by path
     data_dir = Path("data")
@@ -291,7 +291,7 @@ async def run_generation_pipeline_from_pdf(job_id: str, job_record: dict) -> Non
 
         from app.services.markdown_rendering_service import MarkdownRenderingService
         md_renderer = MarkdownRenderingService()
-        renderer = PDFRenderingService()
+        renderer = ReportLabRenderingService()
 
         try:
             # 1. Generate Markdown (Primary)
@@ -307,7 +307,7 @@ async def run_generation_pipeline_from_pdf(job_id: str, job_record: dict) -> Non
             job_record["question_paper_json_content"] = json.dumps(compiled.question_paper, indent=2)
             job_record["answer_key_json_content"] = json.dumps(compiled.answer_key, indent=2)
 
-            # 3. Generate PDF (Optional/Fallback)
+            # 3. Generate PDF using ReportLab (matching qpg_sample.py styling)
             question_paper_pdf = await renderer.render_question_paper(compiled.question_paper)
             answer_key_pdf = await renderer.render_answer_key(compiled.answer_key)
 
@@ -416,7 +416,7 @@ async def run_generation_pipeline_from_blob(job_id: str, job_record: dict) -> No
 
     from app.services import IngestionService, GenerationService
     from app.services.compilation_service import CompilationService
-    from app.services.pdf_rendering_service import PDFRenderingService
+    from app.services.reportlab_rendering_service import ReportLabRenderingService
 
     blob_url = job_record.pop("blob_url", None)
     document_id = job_record["source_document_id"]
@@ -518,7 +518,7 @@ async def run_generation_pipeline_from_blob(job_id: str, job_record: dict) -> No
 
         from app.services.markdown_rendering_service import MarkdownRenderingService
         md_renderer = MarkdownRenderingService()
-        renderer = PDFRenderingService()
+        renderer = ReportLabRenderingService()
 
         try:
             # 1. Generate Markdown (Primary)
@@ -534,7 +534,7 @@ async def run_generation_pipeline_from_blob(job_id: str, job_record: dict) -> No
             job_record["question_paper_json_content"] = json.dumps(compiled.question_paper, indent=2)
             job_record["answer_key_json_content"] = json.dumps(compiled.answer_key, indent=2)
 
-            # 3. Generate PDF (Optional/Fallback)
+            # 3. Generate PDF using ReportLab (matching qpg_sample.py styling)
             question_paper_pdf = await renderer.render_question_paper(compiled.question_paper)
             answer_key_pdf = await renderer.render_answer_key(compiled.answer_key)
 
@@ -661,7 +661,7 @@ async def run_generation_pipeline(job_id: str, job_record: dict) -> None:
     """Background task that runs the full generation pipeline."""
     from app.services import IngestionService, GenerationService
     from app.services.compilation_service import CompilationService
-    from app.services.pdf_rendering_service import PDFRenderingService
+    from app.services.reportlab_rendering_service import ReportLabRenderingService
     from app.services.storage_service import StorageService
 
     try:
@@ -739,7 +739,7 @@ async def run_generation_pipeline(job_id: str, job_record: dict) -> None:
         # Step 4: Render PDFs & Markdown
         from app.services.markdown_rendering_service import MarkdownRenderingService
         md_renderer = MarkdownRenderingService()
-        renderer = PDFRenderingService()
+        renderer = ReportLabRenderingService()
         try:
             # 1. Generate Markdown (Primary)
             question_paper_md = md_renderer.render_question_paper(compiled.question_paper)
