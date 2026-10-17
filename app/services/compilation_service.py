@@ -26,6 +26,13 @@ class CompiledPaper:
     compiled_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+DEFAULT_GENERAL_INSTRUCTIONS = (
+    "Read all questions carefully before answering.",
+    "All questions are compulsory.",
+    "Ensure your handwriting is neat and legible.",
+)
+
+
 class CompilationService:
     """Assembles validated questions into final question paper and answer key."""
 
@@ -54,6 +61,20 @@ class CompilationService:
 
         # Extract Metadata
         meta = spec_dict.get("paper_metadata", {})
+
+        # Header fields (logo, school name, exam title, title, exam level) from the request JSON;
+        # accepted in paper_metadata or at the top level of the specification
+        def header_value(key):
+            return meta.get(key) or spec_dict.get(key)
+
+        header = {
+            "school_name": header_value("school_name") or "",
+            "exam_title": header_value("exam_title") or "",
+            "title": header_value("title") or "Generated Question Paper",
+            "exam_level": header_value("exam_level") or meta.get("grade_level", ""),
+            # Resolved against app/static/images by the renderer
+            "logo_url": header_value("logo_url") or "edusol_logo.jpeg",
+        }
 
         # Group questions by section based on the specification order
         spec_sections = spec_dict.get("sections", [])
@@ -86,17 +107,13 @@ class CompilationService:
         question_paper = {
             "job_id": job_id,
             "tenant_id": tenant_id,
-            "title": meta.get("title", "Generated Question Paper"),
             "grade_level": meta.get("grade_level", "General"),
             "total_marks": meta.get("total_marks", 100),
             "paper_difficulty_level": meta.get("paper_difficulty_level", "medium"),
             "total_questions": len(questions),
-            "logo_url": spec_dict.get("logo_url", "static/images/default_logo.png"),
-            "general_instructions": spec_dict.get("general_instructions", [
-                "Read all questions carefully before answering.",
-                "All questions are compulsory.",
-                "Ensure your handwriting is neat and legible."
-            ]),
+            **header,
+            # Printed only when the request sets show_general_instructions (default false)
+            "general_instructions": self._general_instructions(header_value),
             "version": 1,
             "specification_hash": self._hash_specification(spec_dict),
             "questions": self._format_questions_for_paper(questions),
@@ -106,9 +123,9 @@ class CompilationService:
         }
 
         # DEBUG: Print final JSON payload for PDF generation
-        # print("\n" + "="*50 + "\nFINAL PDF JSON PAYLOAD\n" + "="*50)
-        # print(json.dumps(question_paper, indent=2))
-        # print("="*50 + "\n")
+        #print("\n" + "="*50 + "\nFINAL PDF JSON PAYLOAD\n" + "="*50)
+        #print(json.dumps(question_paper, indent=2))
+        #print("="*50 + "\n")
 
         # Build answer key
         answer_key = {
@@ -117,6 +134,7 @@ class CompilationService:
             "tenant_id": tenant_id,
             "total_questions": len(questions),
             "total_marks": meta.get("total_marks", 100),
+            **header,
             "negative_marking_enabled": spec_dict.get(
                 "mark_distribution", {}
             ).get("negative_marking_enabled", False),
@@ -131,6 +149,17 @@ class CompilationService:
             question_paper=question_paper,
             answer_key=answer_key,
         )
+
+    @staticmethod
+    def _general_instructions(header_value) -> list[str]:
+        """Instructions to print: none unless show_general_instructions is true; then the
+        request's general_instructions, or the default set if none were sent."""
+        flag = header_value("show_general_instructions")
+        if isinstance(flag, str):
+            flag = flag.strip().lower() in ("true", "1", "yes")
+        if not flag:
+            return []
+        return header_value("general_instructions") or list(DEFAULT_GENERAL_INSTRUCTIONS)
 
     def _hash_specification(self, specification: dict) -> str:
         """Create a hash of the specification for versioning."""
@@ -158,6 +187,18 @@ class CompilationService:
                     "validation_passed": q.get("validation_passed", True),
                 }
             )
+            if q.get("question_type") == "case_study":
+                formatted[-1]["case_passage"] = q.get("case_passage", "")
+                formatted[-1]["sub_questions"] = [
+                    {
+                        "question_text": sq.get("question_text", ""),
+                        "question_type": sq.get("question_type", "short_answer"),
+                        "options": sq.get("options", []),
+                        "marks": sq.get("marks"),
+                    }
+                    for sq in q.get("sub_questions", [])
+                    if isinstance(sq, dict)
+                ]
         return formatted
 
     def _format_answers_for_key(self, questions: list[dict]) -> list[dict]:
@@ -173,5 +214,16 @@ class CompilationService:
                 "marking_scheme": q.get("marking_scheme", {}),
                 "sample_answer": q.get("sample_answer", ""),
             }
+            if q.get("question_type") == "case_study":
+                answer["sub_answers"] = [
+                    {
+                        "question_text": sq.get("question_text", ""),
+                        "marks": sq.get("marks"),
+                        "answer": sq.get("answer") or sq.get("answer_outline", ""),
+                        "marking_scheme": sq.get("marking_scheme", {}),
+                    }
+                    for sq in q.get("sub_questions", [])
+                    if isinstance(sq, dict)
+                ]
             answers.append(answer)
         return answers

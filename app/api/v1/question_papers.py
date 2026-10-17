@@ -104,14 +104,17 @@ async def get_job_status(
         except Exception:
             validation_summary = job["validation_summary"]
 
+    # Approved jobs: link to the PDFs already in blob storage (nothing is regenerated)
+    blob_urls = await _existing_blob_urls(job) if job.get("reviewed_at") else {}
+
     return JobStatusResponse(
         job_id=job_id,
         status=job["status"],
         current_step=job.get("current_step"),
         progress_percentage=job.get("progress_percentage", 0),
         validation_summary=validation_summary,
-        question_paper_url=job.get("question_paper_url"),
-        answer_paper_url=job.get("answer_paper_url"),
+        question_paper_url=blob_urls.get("question_paper_pdf_bytes") or job.get("question_paper_url"),
+        answer_paper_url=blob_urls.get("answer_paper_pdf_bytes") or job.get("answer_paper_url"),
         error_message=job.get("error_message"),
         completed_at=datetime.fromisoformat(job["completed_at"])
         if job.get("completed_at")
@@ -308,12 +311,9 @@ async def run_generation_pipeline_from_pdf(job_id: str, job_record: dict) -> Non
             job_record["answer_key_json_content"] = json.dumps(compiled.answer_key, indent=2)
 
             # 3. Generate PDF using ReportLab (matching qpg_sample.py styling)
-            question_paper_pdf = await renderer.render_question_paper(compiled.question_paper)
-            answer_key_pdf = await renderer.render_answer_key(compiled.answer_key)
-
-            # We no longer write these to local disk (data/)
-            job_record["question_paper_pdf_bytes"] = question_paper_pdf
-            job_record["answer_paper_pdf_bytes"] = answer_key_pdf
+            # Stored separately so a failed answer key does not drop the question paper
+            job_record["question_paper_pdf_bytes"] = await renderer.render_question_paper(compiled.question_paper)
+            job_record["answer_paper_pdf_bytes"] = await renderer.render_answer_key(compiled.answer_key)
         except Exception as render_error:
             logger.warning("Rendering failed for job %s: %s", job_id, render_error)
 
@@ -535,12 +535,9 @@ async def run_generation_pipeline_from_blob(job_id: str, job_record: dict) -> No
             job_record["answer_key_json_content"] = json.dumps(compiled.answer_key, indent=2)
 
             # 3. Generate PDF using ReportLab (matching qpg_sample.py styling)
-            question_paper_pdf = await renderer.render_question_paper(compiled.question_paper)
-            answer_key_pdf = await renderer.render_answer_key(compiled.answer_key)
-
-            # We no longer write these to local disk (data/)
-            job_record["question_paper_pdf_bytes"] = question_paper_pdf
-            job_record["answer_paper_pdf_bytes"] = answer_key_pdf
+            # Stored separately so a failed answer key does not drop the question paper
+            job_record["question_paper_pdf_bytes"] = await renderer.render_question_paper(compiled.question_paper)
+            job_record["answer_paper_pdf_bytes"] = await renderer.render_answer_key(compiled.answer_key)
         except Exception as render_error:
             logger.warning("Rendering failed for job %s: %s", job_id, render_error)
 
@@ -592,69 +589,140 @@ async def approve_question_paper(
             detail=f"Job is not pending review (status: {job['status']})",
         )
 
-    # --- Output and Azure Upload Logic ---
-    from pathlib import Path
-    import shutil
-    from app.services.storage_service import StorageService
-
-    try:
-        # 2. Initialize Storage Service
-        storage = StorageService()
-        tenant_id = job.get("tenant_id", "default")
-        container_name = f"tenant-{tenant_id}-outputs"
-
-        # Files to process
-        files_to_process = {
-            "question_paper_pdf_bytes": "question_paper.pdf",
-            "answer_paper_pdf_bytes": "answer_paper.pdf"
+    # Approval happens only once per job: afterwards return the already-uploaded files
+    if job.get("reviewed_at"):
+        logger.info("Job %s already approved; returning existing blob URLs", job_id)
+        return {
+            "message": "Question paper already approved; returning existing files",
+            "job_id": job_id,
+            "reviewed_by": job.get("reviewed_by"),
+            "reviewed_at": job.get("reviewed_at"),
+            "blob_urls": await _existing_blob_urls(job),
+            "render_errors": {},
         }
 
-        blob_urls = {}
-        local_paths = {}
+    # Block a second request from uploading while the first is still running
+    if job.get("approval_in_progress"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Approval for job {job_id} is already in progress",
+        )
+    job["approval_in_progress"] = True
 
-        for key, filename in files_to_process.items():
-            file_data = job.get(key)
-            if file_data:
-                # B. Azure Upload
-                blob_name = f"{job_id}/{filename}"
+    try:
+        from app.services.storage_service import StorageService
+        from app.services.reportlab_rendering_service import ReportLabRenderingService
+
+        # Re-render any PDF that is missing (e.g. rendering failed during generation)
+        renderer = ReportLabRenderingService()
+        render_errors = {}
+        for key, source_key, render in (
+            ("question_paper_pdf_bytes", "question_paper", renderer.render_question_paper),
+            ("answer_paper_pdf_bytes", "answer_key", renderer.render_answer_key),
+        ):
+            if job.get(key) or not job.get(source_key):
+                continue
+            try:
+                job[key] = await render(job[source_key])
+                logger.info("Re-rendered %s for job %s during approval", key, job_id)
+            except Exception as render_err:
+                logger.error("Failed to render %s for job %s: %s", key, job_id, render_err, exc_info=True)
+                render_errors[key] = str(render_err)
+
+        container_name = _output_container(job)
+        # One UTC timestamp per job, kept across retries, e.g.
+        # <job_id>/question_paper_20261017T093015Z.pdf
+        version_ts = job.setdefault("version_ts", datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
+        blob_names = job.setdefault("blob_names", {})
+        upload_errors = {}
+
+        storage = StorageService()
+        try:
+            for key, filename in _OUTPUT_FILES.items():
+                if key in blob_names:
+                    continue  # uploaded by an earlier, partially failed attempt
+                file_data = job.get(key)
+                if not file_data:
+                    upload_errors[key] = render_errors.get(key, "No PDF available for this job")
+                    continue
+                stem, ext = filename.rsplit(".", 1)
+                blob_name = f"{job_id}/{stem}_{version_ts}.{ext}"
                 try:
-                    # Upload to Azure
                     await storage.upload_document(
                         container_name=container_name,
                         blob_name=blob_name,
-                        data=file_data
+                        data=file_data,
                     )
-                    # Generate a secure SAS URL
-                    url = await storage.get_blob_url(container_name, blob_name)
-                    blob_urls[key] = url
-                    logger.info("Successfully uploaded %s to Azure: %s", filename, url)
+                    blob_names[key] = blob_name
+                    logger.info("Uploaded %s to Azure container %s", blob_name, container_name)
                 except Exception as upload_err:
-                    logger.error("Failed to upload %s to Azure: %s", filename, upload_err, exc_info=True)
-            else:
-                logger.warning("No file data found in job record for key: %s", key)
+                    logger.error("Failed to upload %s to Azure: %s", blob_name, upload_err, exc_info=True)
+                    upload_errors[key] = str(upload_err)
+        finally:
+            await storage.close()
 
-        await storage.close()
-        job["output_files"] = local_paths
-        job["blob_urls"] = blob_urls
+        # Not approved unless every file is stored, so the request can be retried
+        if upload_errors:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={
+                    "message": "Approval not completed: some files could not be stored. Retry the request.",
+                    "errors": upload_errors,
+                },
+            )
 
-    except Exception as e:
-        logger.error("Failed to process output files or upload to Azure: %s", e)
-        blob_urls = {}
-        local_paths = {}
-
-    job["status"] = "completed"
-    job["reviewed_by"] = reviewer
-    job["reviewed_at"] = datetime.now(timezone.utc).isoformat()
-    job["review_comments"] = comments
+        job["status"] = "completed"
+        job["reviewed_by"] = reviewer
+        job["reviewed_at"] = datetime.now(timezone.utc).isoformat()
+        job["review_comments"] = comments
+    finally:
+        job["approval_in_progress"] = False
 
     logger.info("Job %s approved by %s", job_id, reviewer)
 
     return {
-        "message": "Question paper approved, files moved to output and uploaded to Azure",
+        "message": "Question paper approved and uploaded to Azure",
         "job_id": job_id,
-        "blob_urls": blob_urls,
-        "local_paths": local_paths
+        "reviewed_by": reviewer,
+        "reviewed_at": job["reviewed_at"],
+        "blob_urls": await _existing_blob_urls(job),
+        "render_errors": render_errors,
     }
+
+
+_OUTPUT_FILES = {
+    "question_paper_pdf_bytes": "question_paper.pdf",
+    "answer_paper_pdf_bytes": "answer_paper.pdf",
+}
+
+
+def _output_container(job: dict) -> str:
+    return f"tenant-{job.get('tenant_id', 'default')}-outputs"
+
+
+async def _existing_blob_urls(job: dict) -> dict:
+    """Read URLs for a job's already-uploaded PDFs.
+
+    Nothing is uploaded: only a new short-lived SAS link is created for the stored
+    blobs, because a link saved at approval time would expire.
+    """
+    blob_names = job.get("blob_names") or {}
+    if not blob_names:
+        return {}
+
+    from app.services.storage_service import StorageService
+
+    storage = StorageService()
+    urls = {}
+    try:
+        for key, blob_name in blob_names.items():
+            try:
+                urls[key] = await storage.get_blob_url(_output_container(job), blob_name)
+            except Exception as url_err:
+                logger.error("Failed to create URL for %s: %s", blob_name, url_err, exc_info=True)
+    finally:
+        await storage.close()
+    return urls
 
 
 async def run_generation_pipeline(job_id: str, job_record: dict) -> None:
@@ -750,12 +818,9 @@ async def run_generation_pipeline(job_id: str, job_record: dict) -> None:
             job_record["answer_paper_md_content"] = answer_key_md
 
             # 2. Generate PDF (Optional/Fallback)
-            question_paper_pdf = await renderer.render_question_paper(compiled.question_paper)
-            answer_key_pdf = await renderer.render_answer_key(compiled.answer_key)
-
-            # Store bytes in memory instead of writing to local disk (data/)
-            job_record["question_paper_pdf_bytes"] = question_paper_pdf
-            job_record["answer_paper_pdf_bytes"] = answer_key_pdf
+            # Stored separately so a failed answer key does not drop the question paper
+            job_record["question_paper_pdf_bytes"] = await renderer.render_question_paper(compiled.question_paper)
+            job_record["answer_paper_pdf_bytes"] = await renderer.render_answer_key(compiled.answer_key)
         except Exception as render_error:
             logger.warning("Rendering failed for job %s: %s", job_id, render_error)
 

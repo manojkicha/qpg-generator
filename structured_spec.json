@@ -1,0 +1,84 @@
+{
+  "paper_metadata": {
+    "title": "Geometry Practice Test (KFEL)",
+    "subject": "Mathematics",
+    "grade_level": "Grade 10",
+    "paper_difficulty_level": "easy",
+    "total_marks": 33,
+    "total_questions": 7,
+    "duration_minutes": 93,
+    "academic_year": "2026",
+    "version": 1
+  },
+  "constraints": {
+    "negative_marking_enabled": true,
+    "negative_mark_weight": 0.25,
+    "pass_mark": 13
+  },
+  "sections": [
+    {
+      "section_id": "Section_A",
+      "section_title": "Algebra - Multiple Choice",
+      "question_type": "multiple_choice",
+      "total_questions_to_generate": 3,
+      "marks_per_question": 5,
+      "instructions": "Choose the correct answer from the given options.",
+      "topic_distribution": [
+        {
+          "chapter_id": "Algebra-1",
+          "chapter_name": "Algebra",
+          "question_count": 3
+        }
+      ]
+    },
+    {
+      "section_id": "Section_B",
+      "section_title": "Calculus - Multiple Choice",
+      "question_type": "multiple_choice",
+      "total_questions_to_generate": 2,
+      "marks_per_question": 10,
+      "instructions": "Choose the correct answer from the given options.",
+      "topic_distribution": [
+        {
+          "chapter_id": "Calculus-1",
+          "chapter_name": "Calculus",
+          "question_count": 2
+        }
+      ]
+    },
+    {
+      "section_id": "Section_C",
+      "section_title": "Geometry - Problem Solving",
+      "question_type": "problem_solving",
+      "total_questions_to_generate": 1,
+      "marks_per_question": 2,
+      "instructions": "Solve the problem showing all steps.",
+      "topic_distribution": [
+        {
+          "chapter_id": "Geometry-1",
+          "chapter_name": "Geometry",
+          "question_count": 1
+        }
+      ]
+    },
+    {
+      "section_id": "Section_D",
+      "section_title": "Algebra - Short Answer",
+      "question_type": "short_answer",
+      "total_questions_to_generate": 1,
+      "marks_per_question": 2,
+      "instructions": "Answer in 2-3 sentences.",
+      "topic_distribution": [
+        {
+          "chapter_id": "Algebra-2",
+          "chapter_name": "Algebra",
+          "question_count": 1
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "generated_by": "structured_test",
+    "random_seed": 7
+  }
+}

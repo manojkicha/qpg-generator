@@ -1,58 +1,64 @@
+# Versions pinned to a tested, working set (Python 3.11).
+# Upgrade deliberately: change a version here, rebuild, and run the tests.
 
 # Core web framework
-fastapi
-python-multipart
-uvicorn[standard]
-pydantic
-pydantic-settings
+fastapi==0.139.0
+python-multipart==0.0.32
+uvicorn[standard]==0.50.0
+pydantic==2.12.5
+pydantic-settings==2.14.2
 
 # Authentication
-PyJWT>=2.8.0
+PyJWT==2.13.0
 
 # Database
-sqlalchemy[asyncio]
-aiosqlite
-psycopg[binary]
-asyncpg
-pgvector
+sqlalchemy[asyncio]==2.0.51
+aiosqlite==0.22.1
+psycopg[binary]==3.3.4
+asyncpg==0.31.0
+pgvector==0.4.2
 
 # HTTP client
-requests>=2.28.0,<3
-httpx
+requests==2.32.5
+httpx==0.28.1
 
 # LLM orchestration
-langgraph
-langchain-core>=0.1.38
-langchain-ollama
-langchain-openai
+langgraph==0.6.5
+langchain-core==0.3.86
+langchain-ollama==0.3.10
+langchain-openai==0.3.28
 
 # Vector stores and search
-azure-search-documents
-chromadb
+azure-search-documents==12.0.0
+chromadb==1.5.9
 
 # Azure services
-azure-core
-azure-ai-documentintelligence
-azure-storage-blob
+azure-core==1.41.0
+azure-ai-documentintelligence==1.0.2
+azure-storage-blob==12.30.1
 
 # PDF rendering and processing
-weasyprint
-jinja2
-fpdf2
-pymupdf
+reportlab==5.0.1
+weasyprint==69.0
+jinja2==3.1.6
+fpdf2==2.8.9
+pymupdf==1.28.0
 
 # OCR and image processing
-paddleocr
-pdf2image
-pytesseract
-opencv-python
-numpy
-pillow
+# PaddleOCR also needs `paddlepaddle==3.3.1` (large download). Without it, OCR
+# falls back to Tesseract automatically. Uncomment to enable PaddleOCR:
+# paddlepaddle==3.3.1
+paddleocr==3.7.0
+pdf2image==1.17.0
+pytesseract==0.3.13
+opencv-python==5.0.0.93
+numpy==2.3.5
+pillow==12.1.1
 
 # Observability and monitoring
-langfuse
-mlflow
+langfuse==4.15.1
+mlflow==3.16.0
 
 # Testing
-pytest
-pytest-asyncio
+pytest==9.1.1
+pytest-asyncio==1.4.0

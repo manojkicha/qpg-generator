@@ -38,7 +38,7 @@ class SectionSpecification(BaseModel):
     section_title: str = Field(..., description="Title of the section")
     question_type: str = Field(
         ...,
-        description="Type of question. Values: multiple_choice, fill_in_the_blanks, match_the_following, picture_based, very_short_answer, short_answer, long_answer"
+        description="Type of question. Values: multiple_choice, fill_in_the_blanks, match_the_following, picture_based, very_short_answer, short_answer, long_answer, case_study (alias: case_based)"
     )
     total_questions_to_generate: int = Field(ge=1, description="Total number of questions to be generated in this section")
     mandatory_to_answer: int = Field(ge=1, description="Number of questions the student must answer")
@@ -58,6 +58,16 @@ class PaperMetadata(BaseModel):
         default="medium",
         pattern="^(easy|medium|hard)$",
         description="Overall difficulty level"
+    )
+    school_name: Optional[str] = Field(None, description="School name shown in the paper / answer key header")
+    exam_title: Optional[str] = Field(None, description="Exam title shown in the header (defaults to title)")
+    exam_level: Optional[str] = Field(None, description="Exam level shown in the header (defaults to grade_level)")
+    logo_url: Optional[str] = Field(None, description="Logo shown in the header: local path, http(s) URL or data: URI")
+    show_general_instructions: bool = Field(
+        default=False, description="Print the general instructions box on the question paper"
+    )
+    general_instructions: Optional[List[str]] = Field(
+        None, description="Instructions printed when show_general_instructions is true (defaults used if omitted)"
     )
 
 

@@ -104,11 +104,17 @@ class ValidatorNode:
             s_id = s_spec.get("section_id")
             s_title = s_spec.get("section_title")
             expected_count = s_spec.get("total_questions_to_generate", 0)
+            # Match the following is generated as ONE question whose pairs = question count
+            is_match = s_spec.get("question_type") == "match_the_following"
+            if is_match:
+                expected_count = 1
 
             # Count questions assigned to this section
             actual_count = sum(1 for q in questions if q.get("section_title") == s_title)
             if actual_count != expected_count:
                 issues.append(f"Section {s_title} count mismatch: expected {expected_count}, got {actual_count}")
+            if is_match:
+                continue
 
             # 3. Validate Chapter Distribution within Section
             topic_dist = s_spec.get("topic_distribution", [])
@@ -153,6 +159,11 @@ class ValidatorNode:
             matching_section = next((s for s in sections if s.get("section_title") == section_title), None)
             if matching_section:
                 expected_marks = matching_section.get("marks_per_question")
+                if question.get("question_type") == "match_the_following" and expected_marks:
+                    expected_pairs = matching_section.get("total_questions_to_generate", 1)
+                    expected_marks *= expected_pairs
+                    if len(question.get("options") or []) != expected_pairs:
+                        issues.append(f"Match the following must have {expected_pairs} pairs, got {len(question.get('options') or [])}")
                 if expected_marks and marks != expected_marks:
                     issues.append(f"Marks ({marks}) mismatch with section spec ({expected_marks})")
 
@@ -163,6 +174,14 @@ class ValidatorNode:
                 issues.append("Match the following must have a list of options")
             elif not all(isinstance(opt, dict) and "left" in opt and "right" in opt for opt in options):
                 issues.append("Match the following options must be a list of objects with 'left' and 'right' keys")
+
+        # Validate 'Case Study' has a scenario and sub-questions based on it
+        if question.get("question_type") == "case_study":
+            if len(str(question.get("case_passage") or "").strip()) < 100:
+                issues.append("Case study must include a case scenario/passage (case_passage)")
+            subs = question.get("sub_questions") or []
+            if len(subs) < 2 or not all(isinstance(sq, dict) and sq.get("question_text") for sq in subs):
+                issues.append("Case study must include at least 2 sub-questions based on the case")
 
         # Validate 'Fill in the Blanks' (and others) have NO options
         no_options_types = ["fill_in_the_blank", "short_answer", "long_answer", "one_word_answer", "essay"]

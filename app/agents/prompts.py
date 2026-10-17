@@ -172,7 +172,8 @@ QUESTION_TYPE_INSTRUCTIONS: dict[str, str] = {
         "Keep the options short (1–3 words each)."
     ),
     "match_the_following": (
-        "Provide two columns labelled 'A' and 'B' with up to 4 pairs each. "
+        "Write ONE question with two columns labelled 'A' and 'B'. Use EXACTLY the number of pairs given in the parameters "
+        "(default 4), all inside this single question's 'options'. "
         "Items in column B should be shuffled so they don't appear in the obvious order. "
         "Use items from the same theme (e.g., 'Animal — its sound', 'Bird — its nest')."
     ),
@@ -210,6 +211,16 @@ QUESTION_TYPE_INSTRUCTIONS: dict[str, str] = {
         "Present a problem that requires multi-step reasoning. "
         "The answer key should show each step of the solution. "
         "Verify the final numerical or logical answer is correct."
+    ),    "case_study": (
+        "Write ONE realistic case scenario (a short story, situation, experiment or data description) of "
+        "120–250 words in 'case_passage', drawn ONLY from the Source Context. Then write 3–5 "
+        "'sub_questions' that can ONLY be answered by reading and reasoning about that case "
+        "(do not ask generic textbook questions unrelated to the scenario). Mix types: recall from the "
+        "case, interpretation, and application/inference. Each sub-question is an object "
+        "{question_text, question_type, options, marks, answer, marking_scheme}; question_type is one of "
+        "multiple_choice (exactly 4 options '(a) ...'), true_false, one_word_answer, fill_in_the_blank or "
+        "short_answer (options [] for non-MCQ). The sub-question marks MUST add up to the total marks. "
+        "Set 'question_text' to a one-line instruction such as 'Read the case below and answer the questions that follow.'"
     ),
 }
 

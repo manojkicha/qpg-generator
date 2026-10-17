@@ -7,276 +7,382 @@
     <style>
         @page {
             size: A4;
-            margin: 1.5cm;
+            margin: 16mm 18mm 14mm;
             @bottom-center {
                 content: "Page " counter(page) " of " counter(pages);
-                font-size: 10pt;
-                color: #333;
+                font-size: 9pt;
+                color: #6B7785;
+                font-family: Helvetica;
             }
         }
         body {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 11pt;
             line-height: 1.4;
-            color: #000;
+            color: #1B2430;
             margin: 0;
             padding: 0;
+            background: white;
         }
-        /* Header Section */
-        .header-container {
-            width: 100%;
-            position: relative;
-            margin-bottom: 1.5em;
-            text-align: center;
-        }
-        .logo-box {
-            position: absolute;
+        /* Navy top header band */
+        .header-band {
+            position: fixed;
             top: 0;
             left: 0;
-            text-align: left;
-            z-index: 10;
+            right: 0;
+            height: 8mm;
+            background: #14284B;
+            z-index: 100;
         }
-        .logo-img {
-            max-height: 80px;
-            max-width: 150px;
-            display: block;
-            border: 1px solid #eee; /* Added for debugging visibility */
+        /* Institution logo ring */
+        .logo-ring {
+            position: fixed;
+            top: 8mm;
+            left: 16mm;
+            width: 12.5mm;
+            height: 12.5mm;
+            background: white;
+            border: 1.6mm solid #14284B;
+            border-radius: 3mm;
+            z-index: 99;
+            overflow: hidden;
         }
-        .exam-title {
-            font-size: 18pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-decoration: underline;
-            margin: 10px 0;
-            display: block;
-        }
-        .meta-table {
+        .logo-ring img {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
+            height: 100%;
+            object-fit: contain;
+        }
+        .logo-ring .sprout {
+            position: absolute;
+            bottom: -1mm;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 1mm solid #14284B;
+            border-width: 1.6mm 1.6mm 0 0;
+            width: 5mm;
+            height: 5mm;
+            border-radius: 0;
+        }
+        .logo-ring .sprout::before,
+        .logo-ring .sprout::after {
+            content: '';
+            position: absolute;
+            background: #14284B;
+        }
+        .logo-ring .sprout::before { width: 2mm; height: 5mm; left: -1mm; top: -2mm; }
+        .logo-ring .sprout::after { width: 5mm; height: 2mm; left: -2mm; top: -1mm; }
+        .exam-title {
+            position: fixed;
+            top: 8mm;
+            left: 40mm;
+            font-family: 'Helvetica-Bold', 'Helvetica', sans-serif;
+            font-size: 16pt;
+            font-weight: bold;
+            color: #14284B;
+            text-transform: uppercase;
+            z-index: 98;
+        }
+        .exam-title span {
+            color: #0E7C86;
             font-weight: normal;
         }
-        .meta-table td {
-            padding: 5px 0;
-            font-size: 12pt;
+        .meta-strip {
+            position: fixed;
+            top: 8mm;
+            left: 16mm;
+            right: 16mm;
+            display: table;
+            height: 6mm;
+            font-size: 7pt;
+            color: #6B7785;
+            z-index: 97;
         }
-        .text-right {
-            text-align: right;
+        .meta-strip div {
+            display: table-cell;
+            padding: 0 4mm;
         }
-        /* Student Info Section */
-        .student-info-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 1.5em;
+        .meta-strip .label {
+            color: #6B7785;
+            font-weight: normal;
         }
-        .student-info-table td {
-            width: 50%;
-            padding: 8px 0;
-            font-weight: bold;
-            font-size: 12pt;
-            vertical-align: bottom;
+        .meta-strip .value {
+            color: #14284B;
+            font-family: 'Helvetica-Bold';
         }
-        .dotted-fill {
-            display: inline-block;
-            border-bottom: 1px dotted #000;
-            width: 65%;
-            height: 1.2em;
-            margin-left: 5px;
-            vertical-align: bottom;
+        .badge {
+            position: fixed;
+            top: 8mm;
+            right: 16mm;
+            width: 80mm;
+            height: 6mm;
+            background: #E3F2F3;
+            border: 1px solid #0E7C86;
+            border-radius: 3mm;
+            font-size: 7pt;
+            color: #14284B;
+            line-height: 5.5mm;
+            text-align: center;
+            z-index: 96;
+            font-family: 'Helvetica-Bold';
         }
-        /* Instructions */
-        .instructions-box {
-            border: 1px solid #000;
-            padding: 12px;
-            margin-bottom: 1.5em;
-            font-size: 11pt;
+        .candidate-row {
+            position: fixed;
+            top: 14mm;
+            left: 16mm;
+            right: 16mm;
+            display: table;
+            height: 6mm;
+            font-size: 7pt;
+            color: #6B7785;
+            z-index: 95;
         }
-        .instructions-box strong {
-            display: block;
-            text-decoration: underline;
-            margin-bottom: 5px;
+        .candidate-row div {
+            display: table-cell;
+            width: 15%;
         }
-        .instructions-box ul {
-            margin: 0;
-            padding-left: 20px;
+        .candidate-row .label {
+            color: #14284B;
+            font-family: 'Helvetica-Bold';
+            font-size: 7pt;
+            padding-right: 1mm;
         }
-        /* Questions Section */
+        .main-content {
+            margin-top: 22mm;
+            padding: 0 16mm;
+        }
         .section-container {
-            margin-bottom: 1.5em;
+            margin-bottom: 12mm;
             page-break-inside: avoid;
         }
         .section-header {
             text-align: center;
-            font-size: 14pt;
+            font-family: 'Helvetica-Bold', 'Helvetica', sans-serif;
+            font-size: 11pt;
             font-weight: bold;
+            color: #14284B;
             text-transform: uppercase;
             text-decoration: underline;
-            margin-bottom: 5px;
+            margin-bottom: 3mm;
+            padding-bottom: 2mm;
+            border-bottom: 1.6mm solid #14284B;
         }
         .section-marks {
             text-align: right;
-            font-weight: bold;
-            font-size: 11pt;
-            margin-bottom: 15px;
+            font-family: 'Helvetica-Bold';
+            font-size: 8pt;
+            color: #0E7C86;
+            margin-bottom: 3mm;
         }
         .question-row {
-            display: table;
-            width: 100%;
-            margin-bottom: 1.2em;
+            margin-bottom: 8mm;
             page-break-inside: avoid;
         }
-        .question-content {
-            display: table-cell;
-            text-align: justify;
-            vertical-align: top;
-            padding-right: 10px;
-        }
-        .question-marks {
-            display: table-cell;
-            width: 60px;
-            text-align: right;
-            vertical-align: top;
+        .question-number {
+            float: left;
+            width: 10mm;
+            height: 10mm;
+            background: #14284B;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Helvetica-Bold', 'Helvetica', sans-serif;
+            font-size: 8.5pt;
             font-weight: bold;
+            color: white;
+        }
+        .question-content {
+            margin-left: 12mm;
+            text-align: justify;
+            line-height: 1.3;
+        }
+        .question-text {
+            margin-bottom: 4mm;
+            font-size: 10pt;
+        }
+        .options {
+            margin: 2mm 0;
+        }
+        .option {
+            display: block;
+            margin-bottom: 1mm;
+            font-size: 9pt;
+        }
+        .marks-badge {
+            float: right;
+            background: #0E7C86;
+            color: white;
+            font-family: 'Helvetica-Bold';
+            font-size: 6pt;
+            padding: 1mm 2mm;
+            border-radius: 2mm;
             white-space: nowrap;
         }
-        /* Match the Following Layout */
+        .section-marks-text {
+            text-align: right;
+            font-family: 'Helvetica-Bold';
+            font-size: 8pt;
+            color: #0E7C86;
+            margin-bottom: 2mm;
+        }
         .match-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-            margin-bottom: 10px;
+            margin-top: 4mm;
+            margin-bottom: 4mm;
         }
         .match-table td {
             width: 45%;
-            padding: 5px;
+            padding: 3mm 2mm;
             vertical-align: top;
-            border-bottom: 1px dotted #ccc;
+            border-bottom: 1mm dotted #D5DCE4;
         }
         .match-column-header {
             font-weight: bold;
             text-align: center;
             text-decoration: underline;
-        }
-        /* Image Rendering */
-        .question-image {
+            font-size: 8pt;
+            color: #14284B;
+            margin-bottom: 2mm;
             display: block;
-            max-width: 300px;
-            max-height: 200px;
-            margin: 10px 0;
-            border: 1px solid #000;
         }
-        /* Footer */
+        .question-image {
+            max-width: 250px;
+            max-height: 180px;
+            margin: 4mm 0;
+            border: 1px solid #D5DCE4;
+            page-break-inside: avoid;
+        }
         .end-marker {
             text-align: center;
-            font-weight: bold;
-            margin-top: 3em;
-            border-top: 1px solid #000;
-            padding-top: 10px;
+            font-family: 'Helvetica-Bold';
+            font-size: 7pt;
+            color: #6B7785;
+            margin-top: 6mm;
+            border-top: 1px solid #D5DCE4;
+            padding-top: 4mm;
+            margin-bottom: 4mm;
         }
         .signature-section {
-            margin-top: 4em;
+            margin-top: 4mm;
             text-align: right;
         }
         .sig-line {
             display: inline-block;
-            border-top: 1px solid #000;
-            width: 220px;
+            border-top: 1px solid #D5DCE4;
+            width: 200px;
             text-align: center;
+            font-size: 7pt;
             font-weight: bold;
-            font-size: 11pt;
-            padding-top: 5px;
+            padding-top: 3mm;
+            color: #1B2430;
+        }
+        .instructions-box {
+            background: #F5F7FA;
+            border: 1px solid #D5DCE4;
+            padding: 6mm 8mm;
+            margin: 6mm 0 4mm;
+            font-size: 9pt;
+            line-height: 1.4;
+        }
+        .instructions-box strong {
+            display: block;
+            text-decoration: underline;
+            margin-bottom: 3mm;
+            font-size: 9pt;
+            color: #14284B;
+        }
+        .instructions-box ul {
+            margin: 0;
+            padding-left: 10mm;
+            list-style-type: none;
+        }
+        .instructions-box li {
+            margin-bottom: 2mm;
+            font-size: 9pt;
         }
     </style>
 </head>
 <body>
-    <div class="header-container">
-        <div class="logo-box">
-            {% if paper.logo_url %}
-                <img src="{{ paper.logo_url }}" class="logo-img">
-            {% else %}
-                <div style="font-size: 10pt; color: #ccc; margin-bottom: 10px;">[INSTITUTION LOGO]</div>
-            {% endif %}
+    <div class="header-band"></div>
+    <div class="logo-ring">
+        {% if paper.logo_url %}
+            <img src="{{ paper.logo_url }}">
+        {% else %}
+            <div class="sprout"></div>
         </div>
-        <span class="exam-title">{{ paper.title }}</span>
-        <table class="meta-table">
-            <tr>
-                <td><strong>Subject:</strong> {{ paper.subject }}</td>
-                <td class="text-right"><strong>Academic Year:</strong> {{ paper.academic_year }}</td>
-            </tr>
-            <tr>
-                <td><strong>Time:</strong> {{ paper.duration_minutes }} Minutes</td>
-                <td class="text-right"><strong>Max Marks:</strong> {{ paper.total_marks }}</td>
-            </tr>
-        </table>
+    </div>
+    <span class="exam-title">{{ paper.title }} <span>Question Paper</span></span>
+
+    <div class="meta-strip">
+        <div><span class="label">MAXIMUM MARKS</span><span class="value">{{ paper.total_marks }}</span></div>
+        <div><span class="label">QUESTIONS</span><span class="value">{{ paper.total_questions }}</span></div>
+        <div><span class="label">TIME ALLOWED</span><span class="value">{{ paper.duration_minutes or '' }} Minutes</span></div>
+        <div><span class="label">SECTIONS</span><span class="value">{{ paper.sections|length }}</span></div>
     </div>
 
-    <table class="student-info-table">
-        <tr>
-            <td>Name: <span class="dotted-fill"></span></td>
-            <td>Roll No: <span class="dotted-fill"></span></td>
-        </tr>
-        <tr>
-            <td>Section: <span class="dotted-fill"></span></td>
-            <td>Date: <span class="dotted-fill"></span></td>
-        </tr>
-    </table>
+    <div class="badge">Q U E S T I O N   P A P E R</div>
 
-    <div class="instructions-box">
-        <strong>General Instructions:</strong>
-        <ul>
-            {% for instruction in paper.general_instructions %}
-            <li>{{ instruction }}</li>
-            {% endfor %}
-        </ul>
+    <div class="candidate-row">
+        <div class="label">Name:</div>
+        <div></div>
+        <div class="label">Roll No:</div>
+        <div></div>
+        <div class="label">Date:</div>
+        <div></div>
     </div>
 
-    {% for section in paper.sections %}
-    <div class="section-container">
-        <div class="section-header">{{ section.section_title }}</div>
-        <div class="section-marks">{{ section.marks_summary }}</div>
+    <div class="main-content">
+        {% for section in paper.sections %}
+        <div class="section-container">
+            <div class="section-header">{{ section.section_title }}</div>
+            <div class="section-marks-text">{{ section.marks_summary }}</div>
 
-        {% for question in section.questions %}
-        <div class="question-row">
-            <div class="question-content">
-                <strong>Q{{ loop.index }}.</strong> {{ question.question_text }}
+            {% for question in section.questions %}
+            <div class="question-row">
+                <div class="question-number">{{ loop.index }}</div>
+                <div class="question-content">
+                    <strong class="question-text">{{ question.question_text }}</strong>
 
-                {% if question.question_type == 'match_the_following' and question.options %}
-                <table class="match-table">
-                    <tr>
-                        <td class="match-column-header">Column A</td>
-                        <td class="match-column-header">Column B</td>
-                    </tr>
-                    {% for pair in question.options %}
-                    <tr>
-                        <td>{{ pair.left }}</td>
-                        <td>{{ pair.right }}</td>
-                    </tr>
-                    {% endfor %}
-                </table>
-                {% elif question.options %}
-                <div style="margin-left: 20px; margin-top: 10px;">
-                    {% for option in question.options %}
-                    <div style="margin-bottom: 5px;">{{ option }}</div>
-                    {% endfor %}
+                    {% if question.question_type == 'match_the_following' and question.options %}
+                    <table class="match-table">
+                        <tr>
+                            <td class="match-column-header">Column A</td>
+                            <td class="match-column-header">Column B</td>
+                        </tr>
+                        {% for pair in question.options %}
+                        <tr>
+                            <td>{{ pair.left }}</td>
+                            <td>{{ pair.right }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    {% elif question.options %}
+                    <div class="options">
+                        {% for option in question.options %}
+                        <div class="option">{{ option }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if question.image_url %}
+                    <img src="{{ question.image_url }}" class="question-image">
+                    {% endif %}
+
+                    <span class="marks-badge">{{ question.marks }} Mark{% if question.marks != 1 %}s{% endif %}</span>
                 </div>
-                {% endif %}
-
-                {% if question.image_url %}
-                <img src="{{ question.image_url }}" class="question-image">
-                {% endif %}
             </div>
-            <div class="question-marks">[{{ question.marks }}]</div>
+            {% endfor %}
         </div>
         {% endfor %}
-    </div>
-    {% endfor %}
 
-    <div class="end-marker">
-        *** END OF QUESTION PAPER ***
-    </div>
+        <div class="end-marker">
+            *** END OF QUESTION PAPER ***
+        </div>
 
-    <div class="signature-section">
-        <div class="sig-line">Invigilator's Signature</div>
+        <div class="signature-section">
+            <div class="sig-line">Invigilator's Signature</div>
+        </div>
     </div>
 </body>
 </html>

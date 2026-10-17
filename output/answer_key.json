@@ -1,0 +1,93 @@
+{
+  "job_id": "demo-full-structured",
+  "question_paper_id": "qp_demo-full-structured",
+  "tenant_id": "demo-tenant",
+  "total_questions": 7,
+  "total_marks": 33,
+  "negative_marking_enabled": false,
+  "negative_marks_per_wrong": 0.25,
+  "answers": [
+    {
+      "question_id": "q_1",
+      "question_text": "Which of the following is a correct statement about solving a system of linear equations?",
+      "marks": 5,
+      "answer_outline": "Identify the methods used to solve a system of linear equations, including substitution, elimination, and matrix methods.",
+      "marking_scheme": {
+        "correct_option": 1
+      },
+      "sample_answer": "The correct statement is that a system of linear equations can be solved using substitution, elimination, or matrix methods."
+    },
+    {
+      "question_id": "q_2",
+      "question_text": "What is the derivative of the function f(x) = sin(x)?",
+      "marks": 10,
+      "answer_outline": "Recall that the derivative of sin(x) with respect to x is cos(x).",
+      "marking_scheme": {
+        "correct_option": 1
+      },
+      "sample_answer": "The derivative of sin(x) is cos(x)."
+    },
+    {
+      "question_id": "q_3",
+      "question_text": "Which of the following statements correctly describes the relationship between a function and its derivative at a specific point?",
+      "marks": 10,
+      "answer_outline": "Identify that the derivative at a point provides the slope of the tangent line to the graph at that point, reflecting the instantaneous rate of change.",
+      "marking_scheme": {
+        "correct_option": 1,
+        "explanation": "The correct answer is (b) because the derivative at a specific point measures the slope of the tangent line to the function's graph at that point, representing the instantaneous rate of change."
+      },
+      "sample_answer": "Option (b): The derivative at a point indicates the slope of the tangent line to the graph at that point."
+    },
+    {
+      "question_id": "q_4",
+      "question_text": "A right triangle has a base length of 6 cm and a height of 8 cm. Calculate the length of the hypotenuse using the Pythagorean theorem. Show all your steps and find the final length of the hypotenuse in centimeters.",
+      "marks": 2,
+      "answer_outline": "1. Apply the Pythagorean theorem: c^2 = a^2 + b^2. 2. Substitute a = 6 cm and b = 8 cm: c^2 = 6^2 + 8^2. 3. Calculate squares: c^2 = 36 + 64. 4. Sum the squares: c^2 = 100. 5. Take the square root of 100: c = \u221a100. 6. Final answer: c = 10 cm.",
+      "marking_scheme": {
+        "step_1": 0.5,
+        "step_2": 0.5
+      },
+      "sample_answer": "Using the Pythagorean theorem, c^2 = 6^2 + 8^2 = 36 + 64 = 100. Taking the square root of 100 gives c = \u221a100 = 10 cm. Therefore, the hypotenuse length is 10 centimeters."
+    },
+    {
+      "question_id": "q_5",
+      "question_text": "A right triangle has one leg measuring 9 cm and the hypotenuse measuring 15 cm. Using the Pythagorean theorem, calculate the length of the other leg. Show all your steps and provide the final length in centimeters.",
+      "marks": 2,
+      "answer_outline": "1. Identify the known values: one leg = 9 cm, hypotenuse = 15 cm. 2. Apply Pythagorean theorem: a^2 + b^2 = c^2. 3. Substitute known values: 9^2 + b^2 = 15^2. 4. Calculate squares: 81 + b^2 = 225. 5. Solve for b^2: b^2 = 225 - 81 = 144. 6. Find b: b = \u221a144 = 12 cm.",
+      "marking_scheme": {
+        "step_1": 0.5,
+        "step_2": 0.5,
+        "step_3": 0.5,
+        "step_4": 0.5,
+        "step_5": 0.5,
+        "final_answer": 0.5
+      },
+      "sample_answer": "Given one leg (a) = 9 cm and hypotenuse (c) = 15 cm. Using Pythagoras' theorem:\n\na^2 + b^2 = c^2\n\nSubstitute known values:\n\n81 + b^2 = 225\n\nSubtract 81 from both sides:\n\nb^2 = 225 - 81 = 144\n\nFind b by taking the square root:\n\nb = \u221a144 = 12 cm\n\nFinal answer: The other leg measures 12 centimeters."
+    },
+    {
+      "question_id": "q_6",
+      "question_text": "A right triangle has one leg measuring 5 cm and the hypotenuse measuring 13 cm. Calculate the length of the other leg using the Pythagorean theorem. Show all your steps and provide the final length in centimeters.",
+      "marks": 2,
+      "answer_outline": "Apply the Pythagorean theorem: a^2 + b^2 = c^2. Substitute known values: 5^2 + b^2 = 13^2. Calculate 5^2 = 25 and 13^2 = 169. Subtract 25 from 169 to find b^2: 169 - 25 = 144. Take the square root of 144 to find b: \u221a144 = 12. Final answer: the other leg measures 12 cm.",
+      "marking_scheme": {
+        "correct_application": 1,
+        "correct_substitution": 0.5,
+        "correct_calculation": 0.25,
+        "final_answer": 0.25
+      },
+      "sample_answer": "Given the hypotenuse c = 13 cm and one leg a = 5 cm, use the Pythagorean theorem:\n\na^2 + b^2 = c^2\n\nSubstitute the known values:\n\n25 + b^2 = 169\n\nSubtract 25 from both sides:\n\nb^2 = 144\n\nTake the square root of both sides:\n\nb = \u221a144 = 12\n\nTherefore, the length of the other leg is 12 cm."
+    },
+    {
+      "question_id": "q_7",
+      "question_text": "Write the general form of a linear equation in one variable and explain what the constants represent.",
+      "marks": 2,
+      "answer_outline": "State the form ax + b = 0; explain that a and b are constants, with 'a' being the coefficient of the variable and 'b' the constant term.",
+      "marking_scheme": {
+        "correct_form": 1,
+        "correct_explanation": 1
+      },
+      "sample_answer": "A linear equation in one variable is written as ax + b = 0, where 'a' and 'b' are constants; 'a' is the coefficient of the variable x, and 'b' is the constant term."
+    }
+  ],
+  "generated_at": "2026-10-15T13:35:34.917589+00:00"
+}

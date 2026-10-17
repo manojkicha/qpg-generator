@@ -152,6 +152,9 @@ Return ONLY the valid JSON object. No markdown text or commentary outside the JS
                 "very_short_answer": "one_word_answer",
                 "short_answer": "short_answer",
                 "long_answer": "long_answer",
+                "case_study": "case_study",
+                "case_based": "case_study",
+                "case_based_questions": "case_study",
             }
 
             # 1. Validation & Marks Balancing
@@ -230,7 +233,29 @@ Return ONLY the valid JSON object. No markdown text or commentary outside the JS
                 tasks = []
                 topic_dist = ps["original_section"].get("topic_distribution", [])
 
-                if topic_dist:
+                if ps["internal_type"] == "match_the_following":
+                    # One match-the-following question whose pairs = question count,
+                    # carrying the whole section's marks (e.g. 4 x 1 -> one question, 4 pairs, 4 marks)
+                    total = count * marks
+                    summary = f"1 x {total} = {total} Marks"
+                    names = list(dict.fromkeys(d.get("chapter_name", "General") for d in topic_dist)) or [metadata.get("title", "the subject")]
+                    chapter_ids = [d.get("chapter_id") for d in topic_dist if d.get("chapter_id")]
+                    tasks.append({
+                        "id": f"q{len(all_tasks)+1}",
+                        "question_type": "match_the_following",
+                        "topic": ", ".join(names),
+                        "chapter_id": chapter_ids[0] if len(chapter_ids) == 1 else None,
+                        "chapter_ids": chapter_ids,
+                        "pairs": count,
+                        "difficulty_level": difficulty,
+                        "marks": total,
+                        "estimated_time_minutes": 2 * count,
+                        "prompt_template": f"Generate one match_the_following question with {count} pairs from {', '.join(names)}",
+                        "section_title": ps["section_name"],
+                        "marks_summary": summary,
+                        "instructions": ps["instructions"]
+                    })
+                elif topic_dist:
                     # Redistribute counts proportionally if the section count was adjusted
                     total_dist_count = sum(d.get("question_count", 0) for d in topic_dist)
                     adjustment_factor = count / total_dist_count if total_dist_count > 0 else 1

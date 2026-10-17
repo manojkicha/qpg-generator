@@ -37,6 +37,13 @@ STRICT FORMATTING RULES:
   1. The 'question_text' should clearly describe the image required.
   2. You MUST identify a relevant image from the provided Source Context. If the context contains image references (e.g., "img_123"), use that reference in the 'image_url' field.
   3. If no specific image reference is found, provide a detailed description for an image generator in the 'image_url' field.
+- For 'case_study':
+  1. 'case_passage' MUST contain the case scenario/passage the student reads (120-250 words, from the Source Context).
+  2. 'sub_questions' MUST be a list of 3-5 objects, each answerable ONLY from the case:
+     {\"question_text\": \"...\", \"question_type\": \"multiple_choice|true_false|one_word_answer|fill_in_the_blank|short_answer\",
+      \"options\": [], \"marks\": 1, \"answer\": \"...\", \"marking_scheme\": {}}
+  3. The sub-question marks MUST add up to the question's total marks.
+  4. 'question_text' is a one-line instruction (e.g. "Read the case below and answer the questions that follow."); 'options' MUST be [].
 
 Your generation style, tone, and structure MUST strictly follow the format seen in the reference document 'question-paper-format_v1.pdf'.
 
@@ -46,7 +53,7 @@ The generated question must include these JSON keys:
 - topic: The topic/subject area
 - question_type: One of short_answer, long_answer, essay, problem_solving, multiple_choice,
   fill_in_the_blank, true_false, picture_based_mcq, match_the_following,
-  one_word_answer, tick_the_correct, draw_and_label
+  one_word_answer, tick_the_correct, draw_and_label, case_study
 - difficulty_level: easy, medium, or hard
 - marks: A positive integer (MUST match the provided marks exactly)
 - estimated_time_minutes: Reasonable time to answer
@@ -55,6 +62,8 @@ The generated question must include these JSON keys:
 - marking_scheme: An object with point allocations per answer element, e.g.
   {\"key_point_1\": 1, \"example\": 1}
 - image_url: The URL or reference to the image (Required for picture_based questions, otherwise null)
+- case_passage: The case scenario text (Required for case_study, otherwise omit)
+- sub_questions: List of sub-question objects as described above (Required for case_study, otherwise omit)
 """
 
     def __init__(self, llm: Any) -> None:
@@ -113,7 +122,14 @@ The generated question must include these JSON keys:
                         question_type, topic, chapter_id, difficulty, marks)
 
             # Modified context selection to handle strict chapter mapping
-            relevant_context = self._select_context(context_chunks, topic, chapter_id, strict_mapping)
+            if task.get("chapter_ids") and not chapter_id:
+                # A single question spanning several chapters (e.g. match the following)
+                relevant_context = "\n\n".join(
+                    self._select_context(context_chunks, topic, cid, strict_mapping) for cid in task["chapter_ids"]
+                )
+            else:
+                relevant_context = self._select_context(context_chunks, topic, chapter_id, strict_mapping)
+            pairs = task.get("pairs")
 
             # Use the specification object or dict for grade context
             grade_ctx = build_grade_context(specification)
@@ -137,13 +153,17 @@ The generated question must include these JSON keys:
                     f"  Chapter ID: {chapter_id if chapter_id else 'N/A'}\n"
                     f"  Difficulty: {difficulty}\n"
                     f"  Marks: {marks}\n"
-                    f"  Estimated Time: {estimated_time} minutes\n\n"
+                    f"  Estimated Time: {estimated_time} minutes\n"
+                    + (f"  Number of Pairs: EXACTLY {pairs} pairs in 'options' (1 question covering all pairs, "
+                       f"{marks} marks in total)\n" if pairs else "")
+                    + "\n"
                     f"  Source Context (use to ensure accuracy):\n"
                     f"  {relevant_context if relevant_context else 'No source context provided'}\n\n"
                     f"{avoidance_text}\n\n"
                     f"  Return ONLY a JSON object with these keys:\n"
                     f"  question_text, options, topic, question_type, difficulty_level, marks,\n"
                     f"  estimated_time_minutes, answer_outline, sample_answer, marking_scheme, image_url"
+                    + (", case_passage, sub_questions" if question_type == "case_study" else "")
                 )),
             ]
 
@@ -193,8 +213,15 @@ The generated question must include these JSON keys:
                     question_data["options"] = [{"left": "Column A", "right": "Column B"}]
                 elif not isinstance(options, list):
                     question_data["options"] = []
+                if pairs and len(question_data["options"]) > pairs:
+                    question_data["options"] = question_data["options"][:pairs]
 
-            # 3. Image URL handling for picture-based questions
+            # 3. Case study: the scenario + sub-questions carry the content
+            if question_data.get("question_type") == "case_study":
+                question_data["options"] = []
+                self._normalize_case_study(question_data, marks)
+
+            # 4. Image URL handling for picture-based questions
             if "picture" in question_data.get("question_type", "").lower():
                 # Try to find an image reference in the source context
                 # The context is a string, look for patterns like img_123 or similar
@@ -227,6 +254,34 @@ The generated question must include these JSON keys:
                 {"agent": "generator", "status": "completed", "count": len(all_generated_questions)}
             ],
         }
+
+    @staticmethod
+    def _normalize_case_study(question_data: dict, total_marks: int) -> None:
+        """Clean sub-questions and make their marks add up to the question's total."""
+        subs = question_data.get("sub_questions") or []
+        if isinstance(subs, dict):
+            subs = list(subs.values())
+        subs = [
+            sq if isinstance(sq, dict) else {"question_text": str(sq), "question_type": "short_answer"}
+            for sq in subs
+            if sq
+        ]
+        for sq in subs:
+            sq.setdefault("question_type", "short_answer")
+            if sq["question_type"] != "multiple_choice" or not isinstance(sq.get("options"), list):
+                sq["options"] = []
+
+        sub_marks = [sq.get("marks") for sq in subs]
+        valid = all(isinstance(m, int) and m > 0 for m in sub_marks)
+        if subs and (not valid or sum(sub_marks) != total_marks):
+            # Spread the total evenly, giving any remainder to the first sub-questions
+            base, extra = divmod(total_marks, len(subs))
+            for i, sq in enumerate(subs):
+                sq["marks"] = base + (1 if i < extra else 0)
+            logger.info("Rebalanced case study sub-question marks to total %d", total_marks)
+
+        question_data["sub_questions"] = subs
+        question_data["case_passage"] = str(question_data.get("case_passage") or "").strip()
 
     @staticmethod
     def _select_context(chunks: list, topic: str, chapter_id: Optional[str] = None, strict: bool = False) -> str:

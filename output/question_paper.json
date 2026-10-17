@@ -1,0 +1,365 @@
+{
+  "job_id": "demo-full-structured",
+  "tenant_id": "demo-tenant",
+  "title": "Geometry Practice Test (KFEL)",
+  "grade_level": "Grade 10",
+  "total_marks": 33,
+  "paper_difficulty_level": "easy",
+  "total_questions": 7,
+  "logo_url": "static/images/default_logo.png",
+  "general_instructions": [
+    "Read all questions carefully before answering.",
+    "All questions are compulsory.",
+    "Ensure your handwriting is neat and legible."
+  ],
+  "version": 1,
+  "specification_hash": "0308cf3df2c0d62a",
+  "questions": [
+    {
+      "id": "q_1",
+      "question_text": "Which of the following is a correct statement about solving a system of linear equations?",
+      "options": [
+        "(a) It can only be solved by substitution.",
+        "(b) It can be solved using substitution, elimination, or matrix methods.",
+        "(c) It always has exactly one solution.",
+        "(d) It can only be solved graphically."
+      ],
+      "topic": "Algebra",
+      "chapter_id": "Algebra-1",
+      "question_type": "multiple_choice",
+      "marks": 5,
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 2,
+      "prompt_used": "",
+      "validation_passed": false
+    },
+    {
+      "id": "q_2",
+      "question_text": "What is the derivative of the function f(x) = sin(x)?",
+      "options": [
+        "(a) -sin(x)",
+        "(b) cos(x)",
+        "(c) -cos(x)",
+        "(d) sin(x)"
+      ],
+      "topic": "Calculus",
+      "chapter_id": "Calculus-1",
+      "question_type": "multiple_choice",
+      "marks": 10,
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 2,
+      "prompt_used": "",
+      "validation_passed": false
+    },
+    {
+      "id": "q_3",
+      "question_text": "Which of the following statements correctly describes the relationship between a function and its derivative at a specific point?",
+      "options": [
+        "(a) The derivative gives the average rate of change over an interval.",
+        "(b) The derivative at a point indicates the slope of the tangent line to the graph at that point.",
+        "(c) The derivative is always positive for increasing functions.",
+        "(d) The derivative is the same as the original function when the function is a straight line."
+      ],
+      "topic": "Calculus",
+      "chapter_id": "Calculus-1",
+      "question_type": "multiple_choice",
+      "marks": 10,
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 2,
+      "prompt_used": "",
+      "validation_passed": false
+    },
+    {
+      "id": "q_4",
+      "question_text": "A right triangle has a base length of 6 cm and a height of 8 cm. Calculate the length of the hypotenuse using the Pythagorean theorem. Show all your steps and find the final length of the hypotenuse in centimeters.",
+      "options": [],
+      "topic": "Geometry",
+      "chapter_id": "Geometry-1",
+      "question_type": "problem_solving",
+      "marks": 2,
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 2,
+      "prompt_used": "",
+      "validation_passed": false
+    },
+    {
+      "id": "q_5",
+      "question_text": "A right triangle has one leg measuring 9 cm and the hypotenuse measuring 15 cm. Using the Pythagorean theorem, calculate the length of the other leg. Show all your steps and provide the final length in centimeters.",
+      "options": [],
+      "topic": "Geometry",
+      "chapter_id": "Geometry-1",
+      "question_type": "problem_solving",
+      "marks": 2,
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 2,
+      "prompt_used": "",
+      "validation_passed": false
+    },
+    {
+      "id": "q_6",
+      "question_text": "A right triangle has one leg measuring 5 cm and the hypotenuse measuring 13 cm. Calculate the length of the other leg using the Pythagorean theorem. Show all your steps and provide the final length in centimeters.",
+      "options": [],
+      "topic": "Geometry",
+      "chapter_id": "Geometry-1",
+      "question_type": "problem_solving",
+      "marks": 2,
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 2,
+      "prompt_used": "",
+      "validation_passed": false
+    },
+    {
+      "id": "q_7",
+      "question_text": "Write the general form of a linear equation in one variable and explain what the constants represent.",
+      "options": [],
+      "topic": "Algebra",
+      "chapter_id": "Algebra-2",
+      "question_type": "short_answer",
+      "marks": 2,
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 2,
+      "prompt_used": "",
+      "validation_passed": false
+    }
+  ],
+  "sections": [
+    {
+      "section_id": "Section_A",
+      "section_title": "Algebra - Multiple Choice",
+      "instructions": "Choose the correct answer from the given options.",
+      "marks_summary": "1 x 5 = 5 Marks",
+      "questions": [
+        {
+          "question_text": "Which of the following is a correct statement about solving a system of linear equations?",
+          "options": [
+            "(a) It can only be solved by substitution.",
+            "(b) It can be solved using substitution, elimination, or matrix methods.",
+            "(c) It always has exactly one solution.",
+            "(d) It can only be solved graphically."
+          ],
+          "topic": "Algebra",
+          "question_type": "multiple_choice",
+          "difficulty_level": "easy",
+          "marks": 5,
+          "estimated_time_minutes": 2,
+          "answer_outline": "Identify the methods used to solve a system of linear equations, including substitution, elimination, and matrix methods.",
+          "sample_answer": "The correct statement is that a system of linear equations can be solved using substitution, elimination, or matrix methods.",
+          "marking_scheme": {
+            "correct_option": 1
+          },
+          "image_url": null,
+          "section_title": "Algebra - Multiple Choice",
+          "marks_summary": "1 x 5 = 5 Marks",
+          "chapter_id": "Algebra-1",
+          "validation_passed": false,
+          "validation_issues": [
+            "Section Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Chapter Algebra (Algebra-1) in Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Section Geometry - Problem Solving count mismatch: expected 1, got 3",
+            "Chapter Geometry (Geometry-1) in Geometry - Problem Solving count mismatch: expected 1, got 3"
+          ]
+        }
+      ]
+    },
+    {
+      "section_id": "Section_B",
+      "section_title": "Calculus - Multiple Choice",
+      "instructions": "Choose the correct answer from the given options.",
+      "marks_summary": "2 x 10 = 20 Marks",
+      "questions": [
+        {
+          "question_text": "What is the derivative of the function f(x) = sin(x)?",
+          "options": [
+            "(a) -sin(x)",
+            "(b) cos(x)",
+            "(c) -cos(x)",
+            "(d) sin(x)"
+          ],
+          "topic": "Calculus",
+          "question_type": "multiple_choice",
+          "difficulty_level": "easy",
+          "marks": 10,
+          "estimated_time_minutes": 2,
+          "answer_outline": "Recall that the derivative of sin(x) with respect to x is cos(x).",
+          "sample_answer": "The derivative of sin(x) is cos(x).",
+          "marking_scheme": {
+            "correct_option": 1
+          },
+          "image_url": null,
+          "section_title": "Calculus - Multiple Choice",
+          "marks_summary": "2 x 10 = 20 Marks",
+          "chapter_id": "Calculus-1",
+          "validation_passed": false,
+          "validation_issues": [
+            "Section Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Chapter Algebra (Algebra-1) in Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Section Geometry - Problem Solving count mismatch: expected 1, got 3",
+            "Chapter Geometry (Geometry-1) in Geometry - Problem Solving count mismatch: expected 1, got 3"
+          ]
+        },
+        {
+          "question_text": "Which of the following statements correctly describes the relationship between a function and its derivative at a specific point?",
+          "options": [
+            "(a) The derivative gives the average rate of change over an interval.",
+            "(b) The derivative at a point indicates the slope of the tangent line to the graph at that point.",
+            "(c) The derivative is always positive for increasing functions.",
+            "(d) The derivative is the same as the original function when the function is a straight line."
+          ],
+          "topic": "Calculus",
+          "question_type": "multiple_choice",
+          "difficulty_level": "easy",
+          "marks": 10,
+          "estimated_time_minutes": 2,
+          "answer_outline": "Identify that the derivative at a point provides the slope of the tangent line to the graph at that point, reflecting the instantaneous rate of change.",
+          "sample_answer": "Option (b): The derivative at a point indicates the slope of the tangent line to the graph at that point.",
+          "marking_scheme": {
+            "correct_option": 1,
+            "explanation": "The correct answer is (b) because the derivative at a specific point measures the slope of the tangent line to the function's graph at that point, representing the instantaneous rate of change."
+          },
+          "image_url": null,
+          "section_title": "Calculus - Multiple Choice",
+          "marks_summary": "2 x 10 = 20 Marks",
+          "chapter_id": "Calculus-1",
+          "validation_passed": false,
+          "validation_issues": [
+            "Section Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Chapter Algebra (Algebra-1) in Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Section Geometry - Problem Solving count mismatch: expected 1, got 3",
+            "Chapter Geometry (Geometry-1) in Geometry - Problem Solving count mismatch: expected 1, got 3"
+          ]
+        }
+      ]
+    },
+    {
+      "section_id": "Section_C",
+      "section_title": "Geometry - Problem Solving",
+      "instructions": "Solve the problem showing all steps.",
+      "marks_summary": "3 x 2 = 6 Marks",
+      "questions": [
+        {
+          "question_text": "A right triangle has a base length of 6 cm and a height of 8 cm. Calculate the length of the hypotenuse using the Pythagorean theorem. Show all your steps and find the final length of the hypotenuse in centimeters.",
+          "options": [],
+          "topic": "Geometry",
+          "question_type": "problem_solving",
+          "difficulty_level": "easy",
+          "marks": 2,
+          "estimated_time_minutes": 2,
+          "answer_outline": "1. Apply the Pythagorean theorem: c^2 = a^2 + b^2. 2. Substitute a = 6 cm and b = 8 cm: c^2 = 6^2 + 8^2. 3. Calculate squares: c^2 = 36 + 64. 4. Sum the squares: c^2 = 100. 5. Take the square root of 100: c = \u221a100. 6. Final answer: c = 10 cm.",
+          "sample_answer": "Using the Pythagorean theorem, c^2 = 6^2 + 8^2 = 36 + 64 = 100. Taking the square root of 100 gives c = \u221a100 = 10 cm. Therefore, the hypotenuse length is 10 centimeters.",
+          "marking_scheme": {
+            "step_1": 0.5,
+            "step_2": 0.5
+          },
+          "image_url": null,
+          "section_title": "Geometry - Problem Solving",
+          "marks_summary": "3 x 2 = 6 Marks",
+          "chapter_id": "Geometry-1",
+          "validation_passed": false,
+          "validation_issues": [
+            "Section Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Chapter Algebra (Algebra-1) in Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Section Geometry - Problem Solving count mismatch: expected 1, got 3",
+            "Chapter Geometry (Geometry-1) in Geometry - Problem Solving count mismatch: expected 1, got 3"
+          ]
+        },
+        {
+          "question_text": "A right triangle has one leg measuring 9 cm and the hypotenuse measuring 15 cm. Using the Pythagorean theorem, calculate the length of the other leg. Show all your steps and provide the final length in centimeters.",
+          "options": [],
+          "topic": "Geometry",
+          "question_type": "problem_solving",
+          "difficulty_level": "easy",
+          "marks": 2,
+          "estimated_time_minutes": 2,
+          "answer_outline": "1. Identify the known values: one leg = 9 cm, hypotenuse = 15 cm. 2. Apply Pythagorean theorem: a^2 + b^2 = c^2. 3. Substitute known values: 9^2 + b^2 = 15^2. 4. Calculate squares: 81 + b^2 = 225. 5. Solve for b^2: b^2 = 225 - 81 = 144. 6. Find b: b = \u221a144 = 12 cm.",
+          "sample_answer": "Given one leg (a) = 9 cm and hypotenuse (c) = 15 cm. Using Pythagoras' theorem:\n\na^2 + b^2 = c^2\n\nSubstitute known values:\n\n81 + b^2 = 225\n\nSubtract 81 from both sides:\n\nb^2 = 225 - 81 = 144\n\nFind b by taking the square root:\n\nb = \u221a144 = 12 cm\n\nFinal answer: The other leg measures 12 centimeters.",
+          "marking_scheme": {
+            "step_1": 0.5,
+            "step_2": 0.5,
+            "step_3": 0.5,
+            "step_4": 0.5,
+            "step_5": 0.5,
+            "final_answer": 0.5
+          },
+          "image_url": null,
+          "section_title": "Geometry - Problem Solving",
+          "marks_summary": "3 x 2 = 6 Marks",
+          "chapter_id": "Geometry-1",
+          "validation_passed": false,
+          "validation_issues": [
+            "Section Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Chapter Algebra (Algebra-1) in Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Section Geometry - Problem Solving count mismatch: expected 1, got 3",
+            "Chapter Geometry (Geometry-1) in Geometry - Problem Solving count mismatch: expected 1, got 3"
+          ]
+        },
+        {
+          "question_text": "A right triangle has one leg measuring 5 cm and the hypotenuse measuring 13 cm. Calculate the length of the other leg using the Pythagorean theorem. Show all your steps and provide the final length in centimeters.",
+          "options": [],
+          "topic": "Geometry",
+          "question_type": "problem_solving",
+          "difficulty_level": "easy",
+          "marks": 2,
+          "estimated_time_minutes": 2,
+          "answer_outline": "Apply the Pythagorean theorem: a^2 + b^2 = c^2. Substitute known values: 5^2 + b^2 = 13^2. Calculate 5^2 = 25 and 13^2 = 169. Subtract 25 from 169 to find b^2: 169 - 25 = 144. Take the square root of 144 to find b: \u221a144 = 12. Final answer: the other leg measures 12 cm.",
+          "sample_answer": "Given the hypotenuse c = 13 cm and one leg a = 5 cm, use the Pythagorean theorem:\n\na^2 + b^2 = c^2\n\nSubstitute the known values:\n\n25 + b^2 = 169\n\nSubtract 25 from both sides:\n\nb^2 = 144\n\nTake the square root of both sides:\n\nb = \u221a144 = 12\n\nTherefore, the length of the other leg is 12 cm.",
+          "marking_scheme": {
+            "correct_application": 1,
+            "correct_substitution": 0.5,
+            "correct_calculation": 0.25,
+            "final_answer": 0.25
+          },
+          "image_url": null,
+          "section_title": "Geometry - Problem Solving",
+          "marks_summary": "3 x 2 = 6 Marks",
+          "chapter_id": "Geometry-1",
+          "validation_passed": false,
+          "validation_issues": [
+            "Section Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Chapter Algebra (Algebra-1) in Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Section Geometry - Problem Solving count mismatch: expected 1, got 3",
+            "Chapter Geometry (Geometry-1) in Geometry - Problem Solving count mismatch: expected 1, got 3"
+          ]
+        }
+      ]
+    },
+    {
+      "section_id": "Section_D",
+      "section_title": "Algebra - Short Answer",
+      "instructions": "Answer in 2-3 sentences.",
+      "marks_summary": "1 x 2 = 2 Marks",
+      "questions": [
+        {
+          "question_text": "Write the general form of a linear equation in one variable and explain what the constants represent.",
+          "options": [],
+          "topic": "Algebra",
+          "question_type": "short_answer",
+          "difficulty_level": "easy",
+          "marks": 2,
+          "estimated_time_minutes": 2,
+          "answer_outline": "State the form ax + b = 0; explain that a and b are constants, with 'a' being the coefficient of the variable and 'b' the constant term.",
+          "sample_answer": "A linear equation in one variable is written as ax + b = 0, where 'a' and 'b' are constants; 'a' is the coefficient of the variable x, and 'b' is the constant term.",
+          "marking_scheme": {
+            "correct_form": 1,
+            "correct_explanation": 1
+          },
+          "image_url": null,
+          "section_title": "Algebra - Short Answer",
+          "marks_summary": "1 x 2 = 2 Marks",
+          "chapter_id": "Algebra-2",
+          "validation_passed": false,
+          "validation_issues": [
+            "Section Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Chapter Algebra (Algebra-1) in Algebra - Multiple Choice count mismatch: expected 3, got 1",
+            "Section Geometry - Problem Solving count mismatch: expected 1, got 3",
+            "Chapter Geometry (Geometry-1) in Geometry - Problem Solving count mismatch: expected 1, got 3"
+          ]
+        }
+      ]
+    }
+  ],
+  "generated_at": "2026-10-15T13:35:34.916814+00:00",
+  "metadata": {
+    "generated_by": "structured_test",
+    "random_seed": 7
+  }
+}

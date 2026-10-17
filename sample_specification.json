@@ -1,0 +1,99 @@
+{
+  "title": "Geometry Practice Test (KFEL)",
+  "subject": "Mathematics",
+  "academic_year": "2026",
+  "duration_minutes": 93,
+  "total_marks": 33,
+  "question_count": 7,
+  "category_distribution": [
+    {
+      "category_name": "Algebra",
+      "min_questions": 3,
+      "max_questions": 5,
+      "min_marks": 14,
+      "max_marks": 24
+    },
+    {
+      "category_name": "Calculus",
+      "min_questions": 1,
+      "max_questions": 3,
+      "min_marks": 7,
+      "max_marks": 17
+    },
+    {
+      "category_name": "Geometry",
+      "min_questions": 1,
+      "max_questions": 2,
+      "min_marks": 1,
+      "max_marks": 7
+    }
+  ],
+  "mark_distribution": {
+    "total_marks": 33,
+    "negative_marking_enabled": true,
+    "negative_mark_weight": 0.0,
+    "pass_mark": 13
+  },
+  "questions": [
+    {
+      "question_type": "essay",
+      "topic": "Calculus",
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 15,
+      "marks": 2,
+      "prompt_template": "Generate an essay-style question on Calculus at easy difficulty that asks the student to compare, contrast, or critically evaluate a concept."
+    },
+    {
+      "question_type": "multiple_choice",
+      "topic": "Algebra",
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 10,
+      "marks": 5,
+      "prompt_template": "Generate a multiple-choice question on Algebra at easy difficulty, with 4 options and exactly one correct answer."
+    },
+    {
+      "question_type": "multiple_choice",
+      "topic": "Calculus",
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 3,
+      "marks": 10,
+      "prompt_template": "Generate a multiple-choice question on Calculus at easy difficulty, with 4 options and exactly one correct answer."
+    },
+    {
+      "question_type": "problem_solving",
+      "topic": "Geometry",
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 15,
+      "marks": 2,
+      "prompt_template": "Generate a problem-solving question on Geometry at easy difficulty that requires applying a formula or method to reach a numeric answer."
+    },
+    {
+      "question_type": "short_answer",
+      "topic": "Algebra",
+      "difficulty_level": "hard",
+      "estimated_time_minutes": 15,
+      "marks": 2,
+      "prompt_template": "Generate a short-answer question on Algebra at hard difficulty, answerable in 2-3 sentences."
+    },
+    {
+      "question_type": "essay",
+      "topic": "Algebra",
+      "difficulty_level": "hard",
+      "estimated_time_minutes": 10,
+      "marks": 10,
+      "prompt_template": "Generate an essay-style question on Algebra at hard difficulty that asks the student to compare, contrast, or critically evaluate a concept."
+    },
+    {
+      "question_type": "short_answer",
+      "topic": "Algebra",
+      "difficulty_level": "easy",
+      "estimated_time_minutes": 15,
+      "marks": 2,
+      "prompt_template": "Generate a short-answer question on Algebra at easy difficulty, answerable in 2-3 sentences."
+    }
+  ],
+  "metadata": {
+    "generated_by": "generate_random_spec.py",
+    "random_seed": 7
+  }
+}

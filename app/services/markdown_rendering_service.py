@@ -21,7 +21,6 @@ class MarkdownRenderingService:
         md.append(f"# {paper_json.get('title', 'Generated Question Paper')}\n")
         md.append(f"**Subject:** {paper_json.get('subject', 'General')}")
         md.append(f"**Academic Year:** {paper_json.get('academic_year', 'N/A')}")
-        md.append(f"**Duration:** {paper_json.get('duration_minutes', 'N/A')} minutes")
         md.append(f"**Total Marks:** {paper_json.get('total_marks', 'N/A')}\n")
 
         md.append("---")
@@ -34,6 +33,13 @@ class MarkdownRenderingService:
         for i, q in enumerate(paper_json.get("questions", []), 1):
             md.append(f"### Question {i} [{q.get('marks', 'N/A')} marks]")
             md.append(f"{q.get('question_text', '')}\n")
+            if q.get("question_type") == "case_study":
+                md.append(f"> **Case Study:** {q.get('case_passage', '')}\n")
+                for j, sq in enumerate(q.get("sub_questions", []), 1):
+                    md.append(f"{j}. {sq.get('question_text', '')} [{sq.get('marks', '')} marks]")
+                    for opt in sq.get("options") or []:
+                        md.append(f"   - {opt}")
+                md.append("")
             md.append("\n*(Space for answer)*\n")
             md.append("\n")
 
@@ -63,6 +69,8 @@ class MarkdownRenderingService:
         for i, ans in enumerate(answer_key_json.get("answers", []), 1):
             md.append(f"### Question {i} ({ans.get('marks', 'N/A')} marks)")
             md.append(f"**Answer Outline:**\n{ans.get('answer_outline', 'No outline provided.')}\n")
+            for j, sa in enumerate(ans.get("sub_answers") or [], 1):
+                md.append(f"{j}. *{sa.get('question_text', '')}* [{sa.get('marks', '')} marks] — {sa.get('answer', '')}")
 
             marking_scheme = ans.get("marking_scheme")
             if marking_scheme and isinstance(marking_scheme, dict):
